@@ -205,17 +205,8 @@ func (service *Service) buildCommand() *cobra.Command {
 			runtime.GOMAXPROCS(runtime.NumCPU())
 		}
 
-		// gin mode
-		switch env.Env {
-		case "production":
-			gin.SetMode("release")
-		case "test", "testing":
-			gin.SetMode("test")
-		default:
-			gin.SetMode("debug")
-		}
-
-		// initialize engine after setting gin mode
+		// initialize gin engine
+		gin.SetMode("release")
 		service.Server.Engine = gin.New()
 		service.Server.Engine.Use(
 			ginRecovery(service.Name),
