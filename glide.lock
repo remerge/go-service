@@ -1,5 +1,5 @@
 hash: 5c331ba78d19a7a22efdf6c2f240dbef05821cfcf1e21774033a4ac735444ba9
-updated: 2017-04-19T08:53:32.723550501Z
+updated: 2017-04-25T10:17:54.30815017Z
 imports:
 - name: github.com/bobziuchkovski/cue
   version: 852726be06b5c373580e50301c29f53f642f65ec
@@ -49,21 +49,21 @@ imports:
   subpackages:
   - exp
 - name: github.com/remerge/go-env
-  version: 4efcd63310617bfb8b38637e94efc41b8062c929
+  version: 75541912f9832307d685b9642d0c984cbb252210
 - name: github.com/remerge/go-lock_free_timer
-  version: 5aa59395cf062aca07c4d598f807d5799431dcbd
+  version: ce8dfacfb411757badd5be536e4e7b8c40f5e44e
 - name: github.com/remerge/go-timestr
-  version: 854378a02e8fd5f4c1aa0eec1de0597ffddcf2fe
+  version: ff3620671690ff5f8e5f365e3a99190b2394ed85
 - name: github.com/remerge/go-tracker
-  version: 36a8956b871c3a6534504182377407dbfb1a9465
+  version: 40e823b4eebf575e2428644e6e3f99a419b7c889
 - name: github.com/remerge/go-xorshift
-  version: c7e2786316c8b0c140cca990cc31ddfc7bd7ac6d
+  version: d47546b42ea9c5e7794a31b3fac844a12f45e390
   subpackages:
   - uuid
 - name: github.com/Shopify/sarama
   version: d4ece5d05a86b2b64248f4943f872bea961ec835
 - name: github.com/spf13/cobra
-  version: b6cb3958937245a12d4d7728be080a6c758f4136
+  version: f4f10f6873175e78bb1503da7e78c260a7f3ef63
 - name: github.com/spf13/pflag
   version: 2300d0f8576fe575f71aaa5b9bbe4e1b0dc2eb51
 - name: github.com/tylerb/graceful
@@ -73,7 +73,7 @@ imports:
   subpackages:
   - context
 - name: golang.org/x/sys
-  version: f3918c30c5c2cb527c0b071a27c35120a6c0719a
+  version: 8c0a5eacbac818f9011015b17992f53d9cec3e8f
   subpackages:
   - unix
 - name: gopkg.in/go-playground/validator.v8
