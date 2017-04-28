@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/bobziuchkovski/cue"
@@ -34,4 +35,20 @@ func setLogFormat() {
 	cue.Collect(level, collector.Terminal{
 		Formatter: formatter,
 	}.New())
+}
+
+type saramaLoggerWrapper struct {
+	logger cue.Logger
+}
+
+func (slw *saramaLoggerWrapper) Print(v ...interface{}) {
+	slw.logger.Info(fmt.Sprint(v))
+}
+
+func (slw *saramaLoggerWrapper) Printf(format string, v ...interface{}) {
+	slw.logger.Info(fmt.Sprintf(format, v))
+}
+
+func (slw *saramaLoggerWrapper) Println(v ...interface{}) {
+	slw.logger.Info(fmt.Sprintln(v))
 }

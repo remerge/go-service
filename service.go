@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Shopify/sarama"
 	"github.com/bobziuchkovski/cue"
 	"github.com/bobziuchkovski/cue/hosted"
 	"github.com/gin-gonic/gin"
@@ -199,6 +200,10 @@ func (service *Service) buildCommand() *cobra.Command {
 		service.Tracker.EventMetadata.Environment = env.Env
 		service.Tracker.EventMetadata.Host = getFQDN()
 		service.Tracker.EventMetadata.Release = CodeVersion
+
+		sarama.Logger = &saramaLoggerWrapper{
+			logger: cue.NewLogger("sarama"),
+		}
 
 		// use all cores by default
 		if os.Getenv("GOMAXPROCS") == "" {
