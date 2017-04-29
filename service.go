@@ -87,9 +87,7 @@ func NewService(name string, port int) *Service {
 // Execute starts cobras main loop for command line handling. If the cobra
 // command returns an error, the process panics.
 func (service *Service) Execute() {
-	if err := service.Command.Execute(); err != nil {
-		service.Log.Panic(err, "failed to execute command")
-	}
+	service.Panic(service.Command.Execute(), "failed to execute command")
 }
 
 func (service *Service) buildCommand() *cobra.Command {
@@ -234,13 +232,16 @@ func (service *Service) Run() {
 		"build":   CodeBuild,
 	}).Infof("starting %s", service.Tracker.EventMetadata.Service)
 
+	// create cache folder if missing #nosec
+	service.Panic(os.MkdirAll("cache", 0755), "failed to create cache folder")
+
 	// check if we have been killed by a panic
 	_, err := os.Stat("cache/.started")
 	if err == nil {
 		_, err = os.Stat("cache/.shutdown_done")
 		if err != nil {
 			// unclean shutdown
-			service.Log.Warn("unclean service shutdown")
+			service.Log.Warn("found unclean service shutdown")
 		}
 	}
 
@@ -248,10 +249,11 @@ func (service *Service) Run() {
 	os.Create("cache/.started")
 
 	// start kafka tracker
-	brokers := strings.Split(service.Tracker.Connect, ",")
-	service.Tracker.Tracker, err = tracker.NewKafkaTracker(brokers,
-		&service.Tracker.EventMetadata)
-	service.Log.Panic(err, "failed to start kafka tracker")
+	service.Tracker.Tracker, err = tracker.NewKafkaTracker(
+		strings.Split(service.Tracker.Connect, ","),
+		&service.Tracker.EventMetadata,
+	)
+	service.Panic(err, "failed to start tracker")
 
 	// background jobs for go-metrics
 	go service.flushMetrics(10 * time.Second)
@@ -285,9 +287,11 @@ func (service *Service) Serve(handler http.Handler) {
 	service.Server.Server.ReadTimeout = service.Server.ConnectionTimeout
 	service.Server.Server.WriteTimeout = service.Server.ConnectionTimeout
 
-	service.Log.Infof("start server listen %s", service.Server.Server.Addr)
-	service.Log.Panic(service.Server.Server.ListenAndServe(),
-		"failed to start server")
+	service.Log.WithFields(cue.Fields{
+		"listen": service.Server.Server.Addr,
+	}).Info("start server")
+
+	service.Panic(service.Server.Server.ListenAndServe(), "server failed")
 }
 
 // ServeTLS starts a TLS encrypted HTTPS server on `service.Server.TLS.Port`.
@@ -310,13 +314,15 @@ func (service *Service) ServeTLS(handler http.Handler) {
 	service.Server.TLS.Server.ReadTimeout = service.Server.ConnectionTimeout
 	service.Server.TLS.Server.WriteTimeout = service.Server.ConnectionTimeout
 
-	service.Log.Infof("start tls server listen %s",
-		service.Server.TLS.Server.Server.Addr)
-	service.Log.Panic(
+	service.Log.WithFields(cue.Fields{
+		"listen": service.Server.TLS.Server.Server.Addr,
+	}).Info("start tls server")
+
+	service.Panic(
 		service.Server.TLS.Server.ListenAndServeTLS(
 			service.Server.TLS.Cert,
 			service.Server.TLS.Key,
-		), "failed to start tls server",
+		), "tls server failed",
 	)
 }
 
@@ -380,10 +386,12 @@ func (service *Service) serveDebug(port int) {
 		},
 	}
 
-	service.Log.Infof("start debug server listen %s",
-		service.Server.Debug.Server.Server.Addr)
-	service.Log.Panic(service.Server.Debug.Server.ListenAndServe(),
-		"failed to start debug server")
+	service.Log.WithFields(cue.Fields{
+		"listen": service.Server.Debug.Server.Server.Addr,
+	}).Info("start debug server")
+
+	service.Panic(service.Server.Debug.Server.ListenAndServe(),
+		"debug server failed")
 }
 
 // ShutdownServers gracefully shuts down the all running HTTP servers (plain,
@@ -393,38 +401,38 @@ func (service *Service) ShutdownServers() {
 	var serverChan, tlsServerChan, debugServerChan <-chan struct{}
 
 	if service.Server.TLS.Server != nil {
-		service.Log.Infof("shutting down tls server")
+		service.Log.Info("tls server shutdown")
 		tlsServerChan = service.Server.TLS.Server.StopChan()
 		service.Server.TLS.Server.Stop(service.Server.ShutdownTimeout)
 	}
 
 	if service.Server.Server != nil {
-		service.Log.Infof("shutting down server")
+		service.Log.Info("server shutdown")
 		serverChan = service.Server.Server.StopChan()
 		service.Server.Server.Stop(service.Server.ShutdownTimeout)
 	}
 
 	if service.Server.Debug.Server != nil {
-		service.Log.Infof("shutting down debug server")
+		service.Log.Info("debug server shutdown")
 		debugServerChan = service.Server.Debug.Server.StopChan()
 		service.Server.Debug.Server.Stop(service.Server.ShutdownTimeout)
 	}
 
 	if service.Server.TLS.Server != nil {
 		<-tlsServerChan
-		service.Log.Infof("tls server shutdown complete")
+		service.Log.Info("tls server shutdown complete")
 		service.Server.TLS.Server = nil
 	}
 
 	if service.Server.Server != nil {
 		<-serverChan
-		service.Log.Infof("server shutdown complete")
+		service.Log.Info("server shutdown complete")
 		service.Server.Server = nil
 	}
 
 	if service.Server.Debug.Server != nil {
 		<-debugServerChan
-		service.Log.Infof("debug server shutdown complete")
+		service.Log.Info("debug server shutdown complete")
 		service.Server.Debug.Server = nil
 	}
 }
@@ -432,21 +440,31 @@ func (service *Service) ShutdownServers() {
 // Shutdown shuts down all HTTP servers (see `ShutdownServers`), the tracker
 // and flushes all log and error buffers.
 func (service *Service) Shutdown() {
-	service.Log.Infof("service shutdown")
+	service.Log.Info("service shutdown")
 
 	service.ShutdownServers()
 
 	if service.Tracker.Tracker != nil {
-		service.Log.Infof("shutting down tracker")
+		service.Log.Info("tracker shutdown")
 		service.Tracker.Tracker.Close()
 	}
 
-	service.Log.Infof("shutdown done")
+	service.Log.Info("shutdown done")
 	os.Create("cache/.shutdown_done")
 
 	// flush cue buffers
 	cue.Close(5 * time.Second)
+}
 
+// Panic reports cause to our logger and panics. If cause is nil Panic does
+// nothing.
+func (service *Service) Panic(cause interface{}, msg string) {
+	if cause == nil {
+		return
+	}
+	service.Log.ReportRecovery(cause, msg)
+	cue.Close(5 * time.Second)
+	panic(cause)
 }
 
 // Wait registers signal handlers for SIGHUP, SIGINT, SIGQUIT and SIGTERM and
@@ -457,7 +475,9 @@ func (service *Service) Wait(shutdownCallback func()) syscall.Signal {
 		syscall.SIGQUIT, syscall.SIGTERM)
 	for {
 		sig := <-ch
-		service.Log.Infof("caught signal %s. shutting down", sig.String())
+		service.Log.WithFields(cue.Fields{
+			"signal": sig.String(),
+		}).Info("shutdown")
 		go service.shutdownCheck()
 		shutdownCallback()
 		return sig.(syscall.Signal)
@@ -466,7 +486,7 @@ func (service *Service) Wait(shutdownCallback func()) syscall.Signal {
 
 func (service *Service) shutdownCheck() {
 	time.Sleep(1 * time.Minute)
-	service.Log.Infof("still not dead. dumping dangling go routines")
+	service.Log.Warn("shutdown blocked")
 	_ = rp.Lookup("goroutine").WriteTo(os.Stdout, 1)
 	go service.shutdownCheck()
 }
