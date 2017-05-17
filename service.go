@@ -45,8 +45,8 @@ type Service struct {
 	Rollbar hosted.Rollbar
 
 	Tracker struct {
+		tracker.Tracker
 		Connect       string
-		Tracker       tracker.Tracker
 		EventMetadata tracker.EventMetadata
 	}
 

@@ -1,5 +1,5 @@
 hash: 5c331ba78d19a7a22efdf6c2f240dbef05821cfcf1e21774033a4ac735444ba9
-updated: 2017-04-25T10:17:54.30815017Z
+updated: 2017-05-17T19:58:09.464074371Z
 imports:
 - name: github.com/bobziuchkovski/cue
   version: 852726be06b5c373580e50301c29f53f642f65ec
@@ -20,7 +20,7 @@ imports:
 - name: github.com/eapache/queue
   version: 44cc805cf13205b55f69e14bcb69867d1ae92f98
 - name: github.com/gin-gonic/gin
-  version: e2212d40c62a98b388a5eb48ecbdcf88534688ba
+  version: d5b353c5d5a560322e6d96121c814115562501f7
   subpackages:
   - binding
   - render
@@ -32,14 +32,12 @@ imports:
   version: 553a641470496b2327abcac10b36396bd98e45c9
 - name: github.com/inconshreveable/mousetrap
   version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
-- name: github.com/klauspost/crc32
-  version: 1bab8b35b6bb565f92cbc97939610af9369f942a
 - name: github.com/manucorporat/sse
   version: ee05b128a739a0fb76c7ebd3ae4810c1de808d6d
 - name: github.com/mattn/go-isatty
   version: fc9e8d8ef48496124e79ae0df75490096eccf6fe
 - name: github.com/pierrec/lz4
-  version: f5b77fd73d83122495309c0f459b810f83cc291f
+  version: 88df27974e3644957507a1ca1866edc8e98d4897
 - name: github.com/pierrec/xxHash
   version: 5a004441f897722c627870a981d02b29924215fa
   subpackages:
@@ -55,17 +53,17 @@ imports:
 - name: github.com/remerge/go-timestr
   version: ff3620671690ff5f8e5f365e3a99190b2394ed85
 - name: github.com/remerge/go-tracker
-  version: 40e823b4eebf575e2428644e6e3f99a419b7c889
+  version: dd2ef59c50479314dcf411bce258172f02611d19
 - name: github.com/remerge/go-xorshift
   version: d47546b42ea9c5e7794a31b3fac844a12f45e390
   subpackages:
   - uuid
 - name: github.com/Shopify/sarama
-  version: d4ece5d05a86b2b64248f4943f872bea961ec835
+  version: c01858abb625b73a3af51d0798e4ad42c8147093
 - name: github.com/spf13/cobra
-  version: f4f10f6873175e78bb1503da7e78c260a7f3ef63
+  version: 4cdb38c072b86bf795d2c81de50784d9fdd6eb77
 - name: github.com/spf13/pflag
-  version: 2300d0f8576fe575f71aaa5b9bbe4e1b0dc2eb51
+  version: e57e3eeb33f795204c1ca35f56c44f83227c6e66
 - name: github.com/tylerb/graceful
   version: d72b0151351a13d0421b763b88f791469c4f5dc7
 - name: golang.org/x/net
@@ -73,7 +71,7 @@ imports:
   subpackages:
   - context
 - name: golang.org/x/sys
-  version: 8c0a5eacbac818f9011015b17992f53d9cec3e8f
+  version: 98b5b1e7e80eb60271c8dc4eba6521ec2c3e811e
   subpackages:
   - unix
 - name: gopkg.in/go-playground/validator.v8
