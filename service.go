@@ -99,6 +99,12 @@ func (service *Service) buildCommand() *cobra.Command {
 	// global flags for all commands
 	flags := cmd.PersistentFlags()
 
+	debugP := flags.Bool(
+		"debug",
+		false,
+		"enable debug logging",
+	)
+
 	flags.StringVar(
 		&env.Env,
 		"environment",
@@ -183,7 +189,7 @@ func (service *Service) buildCommand() *cobra.Command {
 	cmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
 		// reset env
 		env.Set(env.Env)
-		setLogFormat()
+		setLogFormat(*debugP)
 
 		// configure rollbar
 		if env.IsProd() {

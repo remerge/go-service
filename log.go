@@ -10,8 +10,12 @@ import (
 	env "github.com/remerge/go-env"
 )
 
-func setLogFormat() {
+func setLogFormat(debug bool) {
 	level := cue.INFO
+
+	if debug {
+		level = cue.DEBUG
+	}
 
 	formatter := format.Formatf(
 		"%v [%v:%v] %v",
@@ -22,7 +26,6 @@ func setLogFormat() {
 	)
 
 	if !env.IsProd() {
-		level = cue.DEBUG
 		formatter = format.Colorize(
 			format.Formatf(
 				"%v %v",
