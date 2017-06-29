@@ -15,7 +15,7 @@ ifeq ($(GOTEST_TIMEOUT),)
 endif
 
 ifeq ($(GOMETALINTER_OPTS),)
-	GOMETALINTER_OPTS=--enable-all --tests --fast
+	GOMETALINTER_OPTS=--enable-all --tests
 endif
 
 CODE_VERSION=$(TRAVIS_COMMIT)

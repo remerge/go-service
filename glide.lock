@@ -1,5 +1,5 @@
 hash: 5c331ba78d19a7a22efdf6c2f240dbef05821cfcf1e21774033a4ac735444ba9
-updated: 2017-05-17T19:58:09.464074371Z
+updated: 2017-06-29T18:39:15.852174019Z
 imports:
 - name: github.com/bobziuchkovski/cue
   version: 852726be06b5c373580e50301c29f53f642f65ec
@@ -8,11 +8,11 @@ imports:
   - format
   - hosted
 - name: github.com/davecgh/go-spew
-  version: 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
+  version: 04cdfd42973bb9c8589fd6a731800cf222fde1a9
   subpackages:
   - spew
 - name: github.com/eapache/go-resiliency
-  version: b86b1ec0dd4209a588dc1285cdd471e73525c0b3
+  version: b1fe83b5b03f624450823b751b662259ffc6af70
   subpackages:
   - breaker
 - name: github.com/eapache/go-xerial-snappy
@@ -37,7 +37,7 @@ imports:
 - name: github.com/mattn/go-isatty
   version: fc9e8d8ef48496124e79ae0df75490096eccf6fe
 - name: github.com/pierrec/lz4
-  version: 88df27974e3644957507a1ca1866edc8e98d4897
+  version: 5a3d2245f97fc249850e7802e3c01fad02a1c316
 - name: github.com/pierrec/xxHash
   version: 5a004441f897722c627870a981d02b29924215fa
   subpackages:
@@ -53,15 +53,15 @@ imports:
 - name: github.com/remerge/go-timestr
   version: ff3620671690ff5f8e5f365e3a99190b2394ed85
 - name: github.com/remerge/go-tracker
-  version: dd2ef59c50479314dcf411bce258172f02611d19
+  version: fb371f72525f570434464683970c86499fcebe74
 - name: github.com/remerge/go-xorshift
   version: d47546b42ea9c5e7794a31b3fac844a12f45e390
   subpackages:
   - uuid
 - name: github.com/Shopify/sarama
-  version: c01858abb625b73a3af51d0798e4ad42c8147093
+  version: f7e3024a61603647461f4b40bd8f3db88871bf9d
 - name: github.com/spf13/cobra
-  version: 4cdb38c072b86bf795d2c81de50784d9fdd6eb77
+  version: 4d647c8944eb42504a714e57e97f244ed6344722
 - name: github.com/spf13/pflag
   version: e57e3eeb33f795204c1ca35f56c44f83227c6e66
 - name: github.com/tylerb/graceful
@@ -71,7 +71,7 @@ imports:
   subpackages:
   - context
 - name: golang.org/x/sys
-  version: 98b5b1e7e80eb60271c8dc4eba6521ec2c3e811e
+  version: 90796e5a05ce440b41c768bd9af257005e470461
   subpackages:
   - unix
 - name: gopkg.in/go-playground/validator.v8

@@ -251,8 +251,10 @@ func (service *Service) Run() {
 		}
 	}
 
-	os.Remove("cache/.shutdown_done")
-	os.Create("cache/.started")
+	_ = os.Remove("cache/.shutdown_done")
+
+	_, err = os.Create("cache/.started")
+	service.Panic(err, "failed to create cache/.started")
 
 	// start kafka tracker
 	service.Tracker.Tracker, err = tracker.NewKafkaTracker(
@@ -372,7 +374,7 @@ func (service *Service) serveDebug(port int) {
 	service.Server.Debug.Engine.GET("/blockprof/:rate", func(c *gin.Context) {
 		r, err := strconv.Atoi(c.Param("rate"))
 		if err != nil {
-			c.Error(err)
+			_ = c.Error(err)
 			return
 		}
 		runtime.SetBlockProfileRate(r)
@@ -456,10 +458,10 @@ func (service *Service) Shutdown() {
 	}
 
 	service.Log.Info("shutdown done")
-	os.Create("cache/.shutdown_done")
+	_, _ = os.Create("cache/.shutdown_done")
 
 	// flush cue buffers
-	cue.Close(5 * time.Second)
+	_ = cue.Close(5 * time.Second)
 }
 
 // Panic reports cause to our logger and panics. If cause is nil Panic does
@@ -469,7 +471,7 @@ func (service *Service) Panic(cause interface{}, msg string) {
 		return
 	}
 	service.Log.ReportRecovery(cause, msg)
-	cue.Close(5 * time.Second)
+	_ = cue.Close(5 * time.Second)
 	panic(cause)
 }
 
@@ -484,15 +486,20 @@ func (service *Service) Wait(shutdownCallback func()) syscall.Signal {
 		service.Log.WithFields(cue.Fields{
 			"signal": sig.String(),
 		}).Info("shutdown")
-		go service.shutdownCheck()
+		go service.shutdownCheck(5)
 		shutdownCallback()
 		return sig.(syscall.Signal)
 	}
 }
 
-func (service *Service) shutdownCheck() {
+func (service *Service) shutdownCheck(i int) {
+	// do not recurse forever
+	if i < 1 {
+		return
+	}
+
 	time.Sleep(1 * time.Minute)
 	service.Log.Warn("shutdown blocked")
 	_ = rp.Lookup("goroutine").WriteTo(os.Stdout, 1)
-	go service.shutdownCheck()
+	go service.shutdownCheck(i - 1)
 }

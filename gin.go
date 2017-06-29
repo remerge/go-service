@@ -17,7 +17,7 @@ func ginLogger(name string) gin.HandlerFunc {
 			c.Request.Method,
 			c.Request.URL.Path,
 			c.Writer.Status(),
-			time.Now().Sub(start),
+			time.Since(start),
 			c.Errors.String(),
 		)
 	}
@@ -30,9 +30,9 @@ func ginRecovery(name string) gin.HandlerFunc {
 			if err := recover(); err != nil {
 				switch err.(type) {
 				case error:
-					c.Error(err.(error))
+					_ = c.Error(err.(error))
 				default:
-					c.Error(fmt.Errorf("unknown error: %v", err))
+					_ = c.Error(fmt.Errorf("unknown error: %v", err))
 				}
 			}
 
@@ -42,7 +42,9 @@ func ginRecovery(name string) gin.HandlerFunc {
 
 			for _, err := range c.Errors {
 				// #nosec
-				log.WithValue("request", c.Request).Error(err, "gin handler failed")
+				_ = log.WithValue(
+					"request", c.Request,
+				).Error(err, "gin handler failed")
 			}
 
 			c.JSON(500, gin.H{
