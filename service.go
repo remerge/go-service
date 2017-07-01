@@ -41,7 +41,7 @@ type Service struct {
 	Description string
 	Command     *cobra.Command
 
-	Log     cue.Logger
+	Log     *Logger
 	Rollbar hosted.Rollbar
 
 	Tracker struct {
@@ -78,7 +78,7 @@ type Service struct {
 func NewService(name string, port int) *Service {
 	service := &Service{}
 	service.Name = name
-	service.Log = cue.NewLogger(name)
+	service.Log = NewLogger(name)
 	service.Command = service.buildCommand()
 	service.Server.Port = port
 	return service
@@ -87,7 +87,7 @@ func NewService(name string, port int) *Service {
 // Execute starts cobras main loop for command line handling. If the cobra
 // command returns an error, the process panics.
 func (service *Service) Execute() {
-	service.Panic(service.Command.Execute(), "failed to execute command")
+	service.Log.Panic(service.Command.Execute(), "failed to execute command")
 }
 
 func (service *Service) buildCommand() *cobra.Command {
@@ -239,7 +239,7 @@ func (service *Service) Run() {
 	}).Infof("starting %s", service.Tracker.EventMetadata.Service)
 
 	// create cache folder if missing #nosec
-	service.Panic(os.MkdirAll("cache", 0755), "failed to create cache folder")
+	service.Log.Panic(os.MkdirAll("cache", 0755), "failed to create cache folder")
 
 	// check if we have been killed by a panic
 	_, err := os.Stat("cache/.started")
@@ -254,14 +254,14 @@ func (service *Service) Run() {
 	_ = os.Remove("cache/.shutdown_done")
 
 	_, err = os.Create("cache/.started")
-	service.Panic(err, "failed to create cache/.started")
+	service.Log.Panic(err, "failed to create cache/.started")
 
 	// start kafka tracker
 	service.Tracker.Tracker, err = tracker.NewKafkaTracker(
 		strings.Split(service.Tracker.Connect, ","),
 		&service.Tracker.EventMetadata,
 	)
-	service.Panic(err, "failed to start tracker")
+	service.Log.Panic(err, "failed to start tracker")
 
 	// background jobs for go-metrics
 	if env.IsProd() {
@@ -301,7 +301,7 @@ func (service *Service) Serve(handler http.Handler) {
 		"listen": service.Server.Server.Addr,
 	}).Info("start server")
 
-	service.Panic(service.Server.Server.ListenAndServe(), "server failed")
+	service.Log.Panic(service.Server.Server.ListenAndServe(), "server failed")
 }
 
 // ServeTLS starts a TLS encrypted HTTPS server on `service.Server.TLS.Port`.
@@ -328,7 +328,7 @@ func (service *Service) ServeTLS(handler http.Handler) {
 		"listen": service.Server.TLS.Server.Server.Addr,
 	}).Info("start tls server")
 
-	service.Panic(
+	service.Log.Panic(
 		service.Server.TLS.Server.ListenAndServeTLS(
 			service.Server.TLS.Cert,
 			service.Server.TLS.Key,
@@ -400,7 +400,7 @@ func (service *Service) serveDebug(port int) {
 		"listen": service.Server.Debug.Server.Server.Addr,
 	}).Info("start debug server")
 
-	service.Panic(service.Server.Debug.Server.ListenAndServe(),
+	service.Log.Panic(service.Server.Debug.Server.ListenAndServe(),
 		"debug server failed")
 }
 
@@ -464,17 +464,6 @@ func (service *Service) Shutdown() {
 
 	// flush cue buffers
 	_ = cue.Close(5 * time.Second)
-}
-
-// Panic reports cause to our logger and panics. If cause is nil Panic does
-// nothing.
-func (service *Service) Panic(cause interface{}, msg string) {
-	if cause == nil {
-		return
-	}
-	service.Log.ReportRecovery(cause, msg)
-	_ = cue.Close(5 * time.Second)
-	panic(cause)
 }
 
 // Wait registers signal handlers for SIGHUP, SIGINT, SIGQUIT and SIGTERM and
