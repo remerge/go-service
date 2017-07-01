@@ -264,7 +264,9 @@ func (service *Service) Run() {
 	service.Panic(err, "failed to start tracker")
 
 	// background jobs for go-metrics
-	go service.flushMetrics(10 * time.Second)
+	if env.IsProd() {
+		go service.flushMetrics(10 * time.Second)
+	}
 
 	// start debug server
 	if service.Server.Debug.Port < 1 && service.Server.Port > 0 {
