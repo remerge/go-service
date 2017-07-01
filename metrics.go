@@ -246,28 +246,28 @@ func registerRuntimeMemStats(r metrics.Registry) {
 		runtimeMetrics.ReadMemStats)
 }
 
-func (service *Service) flushMetrics(freq time.Duration) {
+func (s *Service) flushMetrics(freq time.Duration) {
 	registerRuntimeMemStats(metrics.DefaultRegistry)
 	go captureRuntimeMemStats(freq)
 
 	raddr, err := net.ResolveUDPAddr("udp", "127.0.0.1:8092")
-	service.Log.Panic(err, "failed to resolve")
+	s.Log.Panic(err, "failed to resolve")
 
 	laddr, err := net.ResolveUDPAddr("udp", "127.0.0.1:0")
-	service.Log.Panic(err, "failed to resolve")
+	s.Log.Panic(err, "failed to resolve")
 
 	conn, err := net.DialUDP("udp", laddr, raddr)
-	service.Log.Panic(err, "failed to connect to statsd")
+	s.Log.Panic(err, "failed to connect to statsd")
 
 	defer func() {
-		_ = service.Log.Error(conn.Close(),
+		_ = s.Log.Error(conn.Close(),
 			"failed to close statsd connection")
 	}()
 
 	writeCb := func(format string, a ...interface{}) {
 		msg := fmt.Sprintf(format, a...)
 		_, err := conn.Write([]byte(msg))
-		_ = service.Log.Error(err, "failed to send metrics")
+		_ = s.Log.Error(err, "failed to send metrics")
 	}
 
 	ticker := time.NewTicker(freq)
@@ -276,12 +276,12 @@ func (service *Service) flushMetrics(freq time.Duration) {
 	for range ticker.C {
 		ts := (time.Now().UnixNano() / int64(freq)) * int64(freq)
 		metrics.DefaultRegistry.Each(func(name string, i interface{}) {
-			service.flushMetric(name, i, ts, writeCb)
+			s.flushMetric(name, i, ts, writeCb)
 		})
 	}
 }
 
-func (service *Service) flushMetric(
+func (s *Service) flushMetric(
 	name string,
 	i interface{},
 	ts int64,
@@ -296,7 +296,7 @@ func (service *Service) flushMetric(
 
 	parts = strings.SplitN(parts[0], ",", 2)
 	measurement := parts[0]
-	tags := "service=" + service.Name
+	tags := "service=" + s.Name
 
 	if len(parts) > 1 {
 		tags += "," + parts[1]
@@ -315,41 +315,41 @@ func (service *Service) flushMetric(
 		metric.Check()
 		writeCb("%s %serror=%s %d\n", series, prefix, metric.Error(), ts)
 	case metrics.Histogram:
-		s := metric.Snapshot()
-		ps := s.Percentiles([]float64{0.5, 0.75, 0.95, 0.99, 0.999})
-		writeCb("%s %scount=%di %d\n", series, prefix, s.Count(), ts)
-		writeCb("%s %smin=%di %d\n", series, prefix, s.Min(), ts)
-		writeCb("%s %smax=%di %d\n", series, prefix, s.Max(), ts)
-		writeCb("%s %smean=%f %d\n", series, prefix, s.Mean(), ts)
-		writeCb("%s %sstddev=%f %d\n", series, prefix, s.StdDev(), ts)
+		sn := metric.Snapshot()
+		ps := sn.Percentiles([]float64{0.5, 0.75, 0.95, 0.99, 0.999})
+		writeCb("%s %scount=%di %d\n", series, prefix, sn.Count(), ts)
+		writeCb("%s %smin=%di %d\n", series, prefix, sn.Min(), ts)
+		writeCb("%s %smax=%di %d\n", series, prefix, sn.Max(), ts)
+		writeCb("%s %smean=%f %d\n", series, prefix, sn.Mean(), ts)
+		writeCb("%s %sstddev=%f %d\n", series, prefix, sn.StdDev(), ts)
 		writeCb("%s %smedian=%f %d\n", series, prefix, ps[0], ts)
 		writeCb("%s %sp75=%f %d\n", series, prefix, ps[1], ts)
 		writeCb("%s %sp95=%f %d\n", series, prefix, ps[2], ts)
 		writeCb("%s %sp99=%f %d\n", series, prefix, ps[3], ts)
 		writeCb("%s %sp999=%f %d\n", series, prefix, ps[4], ts)
 	case metrics.Meter:
-		s := metric.Snapshot()
-		writeCb("%s %scount=%di %d\n", series, prefix, s.Count(), ts)
-		writeCb("%s %srate_m1=%f %d\n", series, prefix, s.Rate1(), ts)
-		writeCb("%s %srate_m5=%f %d\n", series, prefix, s.Rate5(), ts)
-		writeCb("%s %srate_m15=%f %d\n", series, prefix, s.Rate15(), ts)
-		writeCb("%s %srate_mean=%f %d\n", series, prefix, s.RateMean(), ts)
+		sn := metric.Snapshot()
+		writeCb("%s %scount=%di %d\n", series, prefix, sn.Count(), ts)
+		writeCb("%s %srate_m1=%f %d\n", series, prefix, sn.Rate1(), ts)
+		writeCb("%s %srate_m5=%f %d\n", series, prefix, sn.Rate5(), ts)
+		writeCb("%s %srate_m15=%f %d\n", series, prefix, sn.Rate15(), ts)
+		writeCb("%s %srate_mean=%f %d\n", series, prefix, sn.RateMean(), ts)
 	case metrics.Timer:
-		s := metric.Snapshot()
-		ps := s.Percentiles([]float64{0.5, 0.75, 0.95, 0.99, 0.999})
-		writeCb("%s %scount=%di %d\n", series, prefix, s.Count(), ts)
-		writeCb("%s %smin=%di %d\n", series, prefix, s.Min(), ts)
-		writeCb("%s %smax=%di %d\n", series, prefix, s.Max(), ts)
-		writeCb("%s %smean=%f %d\n", series, prefix, s.Mean(), ts)
-		writeCb("%s %sstddev=%f %d\n", series, prefix, s.StdDev(), ts)
+		sn := metric.Snapshot()
+		ps := sn.Percentiles([]float64{0.5, 0.75, 0.95, 0.99, 0.999})
+		writeCb("%s %scount=%di %d\n", series, prefix, sn.Count(), ts)
+		writeCb("%s %smin=%di %d\n", series, prefix, sn.Min(), ts)
+		writeCb("%s %smax=%di %d\n", series, prefix, sn.Max(), ts)
+		writeCb("%s %smean=%f %d\n", series, prefix, sn.Mean(), ts)
+		writeCb("%s %sstddev=%f %d\n", series, prefix, sn.StdDev(), ts)
 		writeCb("%s %smedian=%f %d\n", series, prefix, ps[0], ts)
 		writeCb("%s %sp75=%f %d\n", series, prefix, ps[1], ts)
 		writeCb("%s %sp95=%f %d\n", series, prefix, ps[2], ts)
 		writeCb("%s %sp99=%f %d\n", series, prefix, ps[3], ts)
 		writeCb("%s %sp999=%f %d\n", series, prefix, ps[4], ts)
-		writeCb("%s %srate_m1=%f %d\n", series, prefix, s.Rate1(), ts)
-		writeCb("%s %srate_m5=%f %d\n", series, prefix, s.Rate5(), ts)
-		writeCb("%s %srate_m15=%f %d\n", series, prefix, s.Rate15(), ts)
-		writeCb("%s %srate_mean=%f %d\n", series, prefix, s.RateMean(), ts)
+		writeCb("%s %srate_m1=%f %d\n", series, prefix, sn.Rate1(), ts)
+		writeCb("%s %srate_m5=%f %d\n", series, prefix, sn.Rate5(), ts)
+		writeCb("%s %srate_m15=%f %d\n", series, prefix, sn.Rate15(), ts)
+		writeCb("%s %srate_mean=%f %d\n", series, prefix, sn.RateMean(), ts)
 	}
 }

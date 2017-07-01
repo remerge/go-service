@@ -9,12 +9,12 @@ import (
 var log = cue.NewLogger("main")
 
 func main() {
-	service := service.NewService("service", 9990)
+	s := service.NewService("service", 9990)
 
-	service.Command.Run = func(cmd *cobra.Command, args []string) {
-		go service.Run()
-		service.Wait(service.Shutdown)
+	s.Command.Run = func(cmd *cobra.Command, args []string) {
+		go s.Run()
+		s.Wait(s.Shutdown)
 	}
 
-	service.Execute()
+	s.Execute()
 }

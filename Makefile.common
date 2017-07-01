@@ -31,7 +31,7 @@ endif
 LDIMPORT=$(PACKAGE)/vendor/github.com/remerge/go-service
 LDFLAGS=-X $(LDIMPORT).CodeVersion=$(CODE_VERSION) -X $(LDIMPORT).CodeBuild=$(CODE_BUILD)@$(shell date -u +%FT%TZ)
 
-.PHONY: build run clean lint test bench fmt dep init up gen proto-dep proto release deploy
+.PHONY: build run clean lint lint-all test bench fmt dep init up gen proto-dep proto release deploy
 
 all: build
 
@@ -56,7 +56,11 @@ clean:
 
 lint: build
 	cd $(GOSRCDIR) && \
-		gometalinter --deadline=$(GOTEST_TIMEOUT) $(GOMETALINTER_OPTS) $(GOPATHS)
+		gometalinter --deadline=$(GOTEST_TIMEOUT) --fast $(GOMETALINTER_OPTS) $(GOPATHS)
+
+lint-all: build
+	cd $(GOSRCDIR) && \
+		gometalinter --deadline=600s $(GOMETALINTER_OPTS) $(GOPATHS)
 
 test: lint
 	cd $(GOSRCDIR) && \
