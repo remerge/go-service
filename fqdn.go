@@ -5,7 +5,7 @@ import (
 	"os/exec"
 )
 
-func getFQDN() string {
+func GetFQDN() string {
 	// #nosec
 	out, err := exec.Command("/bin/hostname", "-f").Output()
 	if err != nil {

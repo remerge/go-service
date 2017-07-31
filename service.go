@@ -202,7 +202,7 @@ func (s *Service) buildCommand() *cobra.Command {
 		// configure tracker
 		s.Tracker.EventMetadata.Service = s.Name
 		s.Tracker.EventMetadata.Environment = env.Env
-		s.Tracker.EventMetadata.Host = getFQDN()
+		s.Tracker.EventMetadata.Host = GetFQDN()
 		s.Tracker.EventMetadata.Release = CodeVersion
 
 		sarama.Logger = &saramaLoggerWrapper{
