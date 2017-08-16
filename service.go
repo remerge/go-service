@@ -43,6 +43,7 @@ type Service struct {
 
 	Log     *Logger
 	Rollbar hosted.Rollbar
+	StatsDAddress	string
 
 	Tracker struct {
 		tracker.Tracker
@@ -124,6 +125,13 @@ func (s *Service) buildCommand() *cobra.Command {
 		"rollbar-token",
 		s.Rollbar.Token,
 		"rollbar token",
+	)
+
+	flags.StringVar(
+		&s.StatsDAddress,
+		"statsd-address",
+		"127.0.0.1:8092",
+		"host:port for the statsd daemon",
 	)
 
 	// local service flags

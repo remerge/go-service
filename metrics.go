@@ -250,7 +250,7 @@ func (s *Service) flushMetrics(freq time.Duration) {
 	registerRuntimeMemStats(metrics.DefaultRegistry)
 	go captureRuntimeMemStats(freq)
 
-	raddr, err := net.ResolveUDPAddr("udp", "127.0.0.1:8092")
+	raddr, err := net.ResolveUDPAddr("udp", s.StatsDAddress)
 	s.Log.Panic(err, "failed to resolve")
 
 	laddr, err := net.ResolveUDPAddr("udp", "127.0.0.1:0")
