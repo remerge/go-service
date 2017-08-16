@@ -41,9 +41,9 @@ type Service struct {
 	Description string
 	Command     *cobra.Command
 
-	Log     *Logger
-	Rollbar hosted.Rollbar
-	StatsDAddress	string
+	Log           *Logger
+	Rollbar       hosted.Rollbar
+	StatsDAddress string
 
 	Tracker struct {
 		tracker.Tracker
