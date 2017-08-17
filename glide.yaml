@@ -10,4 +10,5 @@ import:
 - package: github.com/spf13/cobra
 - package: github.com/tylerb/graceful
 - package: github.com/bobziuchkovski/cue
+  repo: https://github.com/remerge/cue
 - package: github.com/remerge/go-lock_free_timer
