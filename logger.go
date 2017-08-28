@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/bobziuchkovski/cue"
+	"github.com/remerge/cue"
 )
 
 // Logger is wrapper for cue.Logger with proper shutdown on panic

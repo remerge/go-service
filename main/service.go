@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/bobziuchkovski/cue"
+	"github.com/remerge/cue"
 	"github.com/remerge/go-service"
 	"github.com/spf13/cobra"
 )
