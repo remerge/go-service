@@ -14,11 +14,11 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
-	"github.com/bobziuchkovski/cue"
-	"github.com/bobziuchkovski/cue/hosted"
 	"github.com/gin-gonic/gin"
 	metrics "github.com/rcrowley/go-metrics"
 	"github.com/rcrowley/go-metrics/exp"
+	"github.com/remerge/cue"
+	"github.com/remerge/cue/hosted"
 	"github.com/remerge/go-env"
 	"github.com/remerge/go-tracker"
 	"github.com/spf13/cobra"

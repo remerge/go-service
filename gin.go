@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/bobziuchkovski/cue"
 	"github.com/gin-gonic/gin"
+	"github.com/remerge/cue"
 )
 
 func ginLogger(name string) gin.HandlerFunc {
