@@ -203,7 +203,7 @@ func (s *Service) buildCommand() *cobra.Command {
 		if env.IsProd() {
 			s.Rollbar.Environment = env.Env
 			s.Rollbar.ProjectVersion = CodeVersion
-			cue.CollectAsync(cue.WARN, 1024*1024, s.Rollbar.New())
+			cue.CollectAsync(cue.ERROR, 1024*1024, s.Rollbar.New())
 			cue.SetFrames(1, 32)
 		}
 
