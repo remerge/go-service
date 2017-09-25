@@ -267,7 +267,9 @@ func (s *Service) flushMetrics(freq time.Duration) {
 	writeCb := func(format string, a ...interface{}) {
 		msg := fmt.Sprintf(format, a...)
 		_, err := conn.Write([]byte(msg))
-		s.Log.Warnf("failed to send metrics: %s", err.Error())
+		if err != nil {
+			s.Log.Warnf("failed to send metrics: %s", err.Error())
+		}
 	}
 
 	ticker := time.NewTicker(freq)
