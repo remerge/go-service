@@ -5,12 +5,9 @@ import (
 	"net/http"
 	"net/http/pprof"
 	"os"
-	"os/signal"
 	"runtime"
-	rp "runtime/pprof"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/Shopify/sarama"
@@ -457,8 +454,10 @@ func (s *Service) ShutdownServers() {
 
 // Shutdown shuts down all HTTP servers (see `ShutdownServers`), the tracker
 // and flushes all log and error buffers.
-func (s *Service) Shutdown() {
-	s.Log.Info("service shutdown")
+func (s *Service) Shutdown(sig os.Signal) {
+	s.Log.WithFields(cue.Fields{
+		"signal": sig.String(),
+	}).Info("service shutdown")
 
 	s.ShutdownServers()
 
@@ -476,29 +475,6 @@ func (s *Service) Shutdown() {
 
 // Wait registers signal handlers for SIGHUP, SIGINT, SIGQUIT and SIGTERM and
 // shuts down the service on notification.
-func (s *Service) Wait(shutdownCallback func()) syscall.Signal {
-	ch := make(chan os.Signal, 2)
-	signal.Notify(ch, syscall.SIGHUP, syscall.SIGINT,
-		syscall.SIGQUIT, syscall.SIGTERM)
-	for {
-		sig := <-ch
-		s.Log.WithFields(cue.Fields{
-			"signal": sig.String(),
-		}).Info("shutdown")
-		go s.shutdownCheck(5)
-		shutdownCallback()
-		return sig.(syscall.Signal)
-	}
-}
-
-func (s *Service) shutdownCheck(i int) {
-	// do not recurse forever
-	if i < 1 {
-		return
-	}
-
-	time.Sleep(1 * time.Minute)
-	s.Log.Warn("shutdown blocked")
-	_ = rp.Lookup("goroutine").WriteTo(os.Stdout, 1)
-	go s.shutdownCheck(i - 1)
+func (s *Service) Wait(timeout time.Duration, handler ShutdownHandler) {
+	WaitForShutdown(timeout, handler)
 }

@@ -1,12 +1,14 @@
-hash: 72c19422b9e2f63dedeb81d09464dec07e9235225a7935828f2827f1780ab3cb
-updated: 2017-12-05T13:05:08.820422695+01:00
+hash: 6edeb45b38239e358e7ec3b1d5ce3a3b1a1694a8b876d88c23ea840f8534c22f
+updated: 2018-01-18T07:58:22.646727889Z
 imports:
+- name: github.com/cenkalti/backoff
+  version: 2ea60e5f094469f9e65adb9cd103795b73ae743e
 - name: github.com/davecgh/go-spew
   version: ecdeabc65495df2dec95d7c4a4c3e021903035e5
   subpackages:
   - spew
 - name: github.com/eapache/go-resiliency
-  version: b1fe83b5b03f624450823b751b662259ffc6af70
+  version: ef9aaa7ea8bd2448429af1a77cf41b2b3b34bdd6
   subpackages:
   - breaker
 - name: github.com/eapache/go-xerial-snappy
@@ -16,7 +18,7 @@ imports:
 - name: github.com/gin-contrib/sse
   version: 22d885f9ecc78bf4ee5d72b937e4bbcdc58e8cae
 - name: github.com/gin-gonic/gin
-  version: 9e895470ddd40a45f28dbe4e96bfb5e893d54f9e
+  version: a712f77d7aaec7eb4766a663924aaa4e54d3fe70
   subpackages:
   - binding
   - json
@@ -30,11 +32,11 @@ imports:
 - name: github.com/inconshreveable/mousetrap
   version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
 - name: github.com/json-iterator/go
-  version: 051434fab7e041ee2834e049ceae37492fc0412c
+  version: c3ed5e85e01b662dce06b590ba4262266acbc73a
 - name: github.com/mattn/go-isatty
   version: 6ca4dbf54d38eea1a992b3c722a76a5d1c4cb25c
 - name: github.com/pierrec/lz4
-  version: 08c27939df1bd95e881e2c2367a749964ad1fceb
+  version: ed8d4cc3b461464e69798080a0092bd028910298
 - name: github.com/pierrec/xxHash
   version: a0006b13c722f7f12368c00a3d3c2ae8a999a0c6
   subpackages:
@@ -50,33 +52,37 @@ imports:
   - format
   - hosted
 - name: github.com/remerge/go-env
-  version: 2ae671c97039656f07233e1718aabda83abcb614
+  version: 4de48725234fac1aff0d580ef3215c5efe1b41c1
 - name: github.com/remerge/go-lock_free_timer
   version: 198222a260ed873fd60f4b6014bcf4b550dcf01f
 - name: github.com/remerge/go-timestr
-  version: a31c75d30272d252d3fe597d5be055553ebf43b8
+  version: 6d104352246ec1352a09c681f5ea4dd2335a71e8
 - name: github.com/remerge/go-tracker
-  version: a350bd31fc7cbcfcbcfbc9d55c33f514c4e7f654
+  version: 4da6d9315fa256aa305b10e62fcc17a2e8424fdc
 - name: github.com/remerge/go-xorshift
-  version: 311573fe0a94af7b7597258aaf1fc2fbee2db0d4
+  version: 930dc4b93c3a7faa6e3558a5b755ec6d9b536aa4
 - name: github.com/Shopify/sarama
-  version: 66fbffdee6a872ad6bfa5d1156619227b481608c
+  version: d0cc7fec83626dc42723e528d845d10bf8d82b7f
 - name: github.com/spf13/cobra
-  version: de2d9c4eca8f3c1de17d48b096b6504e0296f003
+  version: 0c34d16c3123764e413b9ed982ada58b1c3d53ea
 - name: github.com/spf13/pflag
   version: 4c012f6dcd9546820e378d0bdda4d8fc772cdfea
 - name: github.com/tylerb/graceful
   version: d72b0151351a13d0421b763b88f791469c4f5dc7
 - name: github.com/ugorji/go
-  version: f0aa215a7d653544d39d0e27dfa10fa4b183f397
+  version: 9831f2c3ac1068a78f50999a30db84270f647af6
   subpackages:
   - codec
+- name: golang.org/x/net
+  version: 5ccada7d0a7ba9aeb5d3aca8d3501b4c2a509fec
+  subpackages:
+  - context
 - name: golang.org/x/sys
-  version: 8b4580aae2a0dd0c231a45d3ccb8434ff533b840
+  version: 2c42eef0765b9837fbdab12011af7830f55f88f0
   subpackages:
   - unix
 - name: gopkg.in/go-playground/validator.v8
   version: 5f1438d3fca68893a817e4a66806cea46a9e4ebf
 - name: gopkg.in/yaml.v2
-  version: 287cf08546ab5e7e37d55a84f7ed3fd1db036de5
+  version: d670f9405373e636a5a2765eea47fac0c9bc91a4
 testImports: []

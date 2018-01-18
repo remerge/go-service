@@ -246,6 +246,7 @@ func registerRuntimeMemStats(r metrics.Registry) {
 		runtimeMetrics.ReadMemStats)
 }
 
+// nolint: unparam
 func (s *Service) flushMetrics(freq time.Duration) {
 	registerRuntimeMemStats(metrics.DefaultRegistry)
 	go captureRuntimeMemStats(freq)

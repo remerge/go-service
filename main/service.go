@@ -1,6 +1,8 @@
 package main
 
 import (
+	"time"
+
 	"github.com/remerge/cue"
 	"github.com/remerge/go-service"
 	"github.com/spf13/cobra"
@@ -13,7 +15,7 @@ func main() {
 
 	s.Command.Run = func(cmd *cobra.Command, args []string) {
 		go s.Run()
-		s.Wait(s.Shutdown)
+		s.Wait(10*time.Second, s.Shutdown)
 	}
 
 	s.Execute()
