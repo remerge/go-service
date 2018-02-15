@@ -279,6 +279,7 @@ func (s *Service) Run() {
 	}
 
 	if s.Server.Debug.Port > 0 {
+		s.initDebugEngine()
 		go s.serveDebug(s.Server.Debug.Port)
 	}
 }
@@ -341,7 +342,7 @@ func (s *Service) ServeTLS(handler http.Handler) {
 	)
 }
 
-func (s *Service) serveDebug(port int) {
+func (s *Service) initDebugEngine() {
 	if s.Server.Debug.Engine == nil {
 		s.Server.Debug.Engine = gin.New()
 		s.Server.Debug.Engine.Use(
@@ -349,7 +350,9 @@ func (s *Service) serveDebug(port int) {
 			ginLogger(s.Name),
 		)
 	}
+}
 
+func (s *Service) serveDebug(port int) {
 	// expvar & go-metrics
 	s.Server.Debug.Engine.GET("/vars",
 		gin.WrapH(exp.ExpHandler(metrics.DefaultRegistry)))
