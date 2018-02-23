@@ -458,9 +458,11 @@ func (s *Service) ShutdownServers() {
 // Shutdown shuts down all HTTP servers (see `ShutdownServers`), the tracker
 // and flushes all log and error buffers.
 func (s *Service) Shutdown(sig os.Signal) {
-	s.Log.WithFields(cue.Fields{
-		"signal": sig.String(),
-	}).Info("service shutdown")
+	v := "none (normal termination)"
+	if sig != nil {
+		v = sig.String()
+	}
+	s.Log.WithValue("signal", v).Info("service shutdown")
 
 	s.ShutdownServers()
 
