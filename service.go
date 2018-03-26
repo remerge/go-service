@@ -42,6 +42,10 @@ type Service struct {
 	Rollbar       hosted.Rollbar
 	StatsDAddress string
 
+	Debug struct {
+		Active bool
+	}
+
 	Tracker struct {
 		tracker.Tracker
 		Connect       string
@@ -97,7 +101,8 @@ func (s *Service) buildCommand() *cobra.Command {
 	// global flags for all commands
 	flags := cmd.PersistentFlags()
 
-	debugP := flags.Bool(
+	flags.BoolVar(
+		&s.Debug.Active,
 		"debug",
 		false,
 		"enable debug logging",
@@ -194,7 +199,7 @@ func (s *Service) buildCommand() *cobra.Command {
 	cmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
 		// reset env
 		env.Set(env.Env)
-		setLogFormat(*debugP)
+		setLogFormat(s.Debug.Active)
 
 		// configure rollbar
 		if env.IsProd() {
