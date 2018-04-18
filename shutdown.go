@@ -11,11 +11,13 @@ import (
 	"github.com/cenkalti/backoff"
 )
 
-type ShutdownHandler func(os.Signal)
+type shutdownFunc func(sig os.Signal)
 
 // WaitForShutdown registers signal handlers for SIGHUP, SIGINT, SIGQUIT and
 // SIGTERM and shuts down the service on notification.
-func WaitForShutdown(timeout time.Duration, handler ShutdownHandler) {
+func waitForShutdown(handler shutdownFunc, done chan bool) {
+	timeout := time.Minute
+
 	ch := make(chan os.Signal, 2)
 
 	signal.Notify(
@@ -26,7 +28,13 @@ func WaitForShutdown(timeout time.Duration, handler ShutdownHandler) {
 		syscall.SIGTERM,
 	)
 
-	sig := <-ch
+	var signal os.Signal
+	select {
+	case sig := <-ch:
+		signal = sig
+	case <-done:
+		signal = syscall.SIGQUIT
+	}
 
 	ebo := backoff.NewExponentialBackOff()
 	ebo.InitialInterval = 5 * time.Second
@@ -40,7 +48,7 @@ func WaitForShutdown(timeout time.Duration, handler ShutdownHandler) {
 	}()
 
 	if handler != nil {
-		handler(sig)
+		handler(signal)
 	}
 }
 

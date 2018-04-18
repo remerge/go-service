@@ -247,7 +247,7 @@ func registerRuntimeMemStats(r metrics.Registry) {
 }
 
 // nolint: unparam
-func (s *Service) flushMetrics(freq time.Duration) {
+func (s *Executor) flushMetrics(freq time.Duration) {
 	registerRuntimeMemStats(metrics.DefaultRegistry)
 	go captureRuntimeMemStats(freq)
 
@@ -284,7 +284,7 @@ func (s *Service) flushMetrics(freq time.Duration) {
 	}
 }
 
-func (s *Service) flushMetric(
+func (s *Executor) flushMetric(
 	name string,
 	i interface{},
 	ts int64,
@@ -299,7 +299,7 @@ func (s *Service) flushMetric(
 
 	parts = strings.SplitN(parts[0], ",", 2)
 	measurement := parts[0]
-	tags := "service=" + s.Name
+	tags := fmt.Sprintf("service=%s", s.Name)
 
 	if len(parts) > 1 {
 		tags += "," + parts[1]

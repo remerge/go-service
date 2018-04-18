@@ -20,6 +20,7 @@ endif
 
 ifeq ($(GOMETALINTER_EXCLUDES),)
 	GOMETALINTER_EXCLUDES=\
+	  --disable lll \
 		--exclude "\.pb\.go:" \
 		--exclude "_fsm\.go:" \
 		--exclude "_easyjson\.go:" \

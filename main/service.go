@@ -1,22 +1,39 @@
 package main
 
 import (
-	"time"
+	"os"
 
-	"github.com/remerge/cue"
 	"github.com/remerge/go-service"
-	"github.com/spf13/cobra"
 )
 
-var log = cue.NewLogger("main")
+// SimpleService simple service without server
+type SimpleService struct {
+	*service.Executor
+}
+
+func newSimpleService() *SimpleService {
+	s := &SimpleService{}
+	s.Executor = service.NewExecutor("service", s)
+	return s
+}
+
+func (s *SimpleService) Init() error {
+	s.Log.Info("Initializing...")
+	return nil
+}
+
+func (s *SimpleService) Run() error {
+	s.Log.Info("Running...")
+	return nil
+}
+
+func (s *SimpleService) Shutdown(sig os.Signal) {
+	s.Log.Info("Shutdown...")
+}
 
 func main() {
-	s := service.NewService("service", 9990)
-
-	s.Command.Run = func(cmd *cobra.Command, args []string) {
-		go s.Run()
-		s.Wait(10*time.Second, s.Shutdown)
-	}
+	s := newSimpleService()
+	//s := newSimpleServer()
 
 	s.Execute()
 }
