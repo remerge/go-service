@@ -19,6 +19,10 @@ import (
 type Executor struct {
 	service Service
 
+	// Sends nil when inited worked correctly, or error otherwize
+	// You can use it to be notified the end of init
+	readyC chan struct{}
+
 	Name        string
 	Description string
 	Command     *cobra.Command
@@ -42,6 +46,7 @@ func NewExecutor(name string, service Service) *Executor {
 	s.Name = name
 	s.Log = NewLogger(name)
 	s.Command = s.buildCommand()
+	s.readyC = make(chan struct{}, 1)
 	return s
 }
 
@@ -110,6 +115,10 @@ func (s *Executor) init() error {
 	return s.service.Init()
 }
 
+func (s *Executor) Ready() <-chan struct{} {
+	return s.readyC
+}
+
 // Execute starts cobras main loop for command line handling. If the cobra
 // command returns an error, the process panics.
 func (s *Executor) Execute() {
@@ -164,6 +173,7 @@ func (s *Executor) buildCommand() *cobra.Command {
 
 	cmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
 		err := s.init()
+		s.readyC <- struct{}{}
 		if err != nil {
 			s.Log.Panic(err, "Error during service init")
 		}
@@ -188,18 +198,17 @@ func (s *Executor) buildCommand() *cobra.Command {
 // Shutdown shuts down all HTTP servers (see `ShutdownServers`), the tracker
 // and flushes all log and error buffers.
 func (s *Executor) shutdown(sig os.Signal) {
+	s.service.Shutdown(sig)
+	s.extendedShutdown(sig)
+	close(s.readyC)
 	v := "none (normal termination)"
 	if sig != nil {
 		v = sig.String()
 	}
 	s.Log.WithValue("signal", v).Info("service shutdown")
-
-	s.Log.Info("shutdown done")
 	_, _ = os.Create("cache/.shutdown_done")
 
 	// flush cue buffers
 	_ = cue.Close(5 * time.Second)
-
-	s.extendedShutdown(sig)
-	s.service.Shutdown(sig)
+	s.Log.Info("shutdown done")
 }

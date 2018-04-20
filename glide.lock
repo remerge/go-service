@@ -1,14 +1,14 @@
-hash: 6edeb45b38239e358e7ec3b1d5ce3a3b1a1694a8b876d88c23ea840f8534c22f
-updated: 2018-02-14T08:29:05.327369989Z
+hash: 91739b53bbf8be245fa09050a8c28f3eaf28baf9905a53ea92558b64bbf08aac
+updated: 2018-04-19T16:25:45.528853838+02:00
 imports:
 - name: github.com/cenkalti/backoff
-  version: 2ea60e5f094469f9e65adb9cd103795b73ae743e
+  version: 309aa717adbf351e92864cbedf9cca0b769a4b5a
 - name: github.com/davecgh/go-spew
-  version: 87df7c60d5820d0f8ae11afede5aa52325c09717
+  version: 8991bc29aa16c548c550c7ff78260e27b9ab7c73
   subpackages:
   - spew
 - name: github.com/eapache/go-resiliency
-  version: ef9aaa7ea8bd2448429af1a77cf41b2b3b34bdd6
+  version: ea41b0fad31007accc7f806884dcdf3da98b79ce
   subpackages:
   - breaker
 - name: github.com/eapache/go-xerial-snappy
@@ -18,7 +18,7 @@ imports:
 - name: github.com/gin-contrib/sse
   version: 22d885f9ecc78bf4ee5d72b937e4bbcdc58e8cae
 - name: github.com/gin-gonic/gin
-  version: 783c7ee9c14eac0e65b501664b4f553291556b43
+  version: 46662e700bd20289503475770dbf0384e43398eb
   subpackages:
   - binding
   - json
@@ -32,57 +32,66 @@ imports:
 - name: github.com/inconshreveable/mousetrap
   version: 76626ae9c91c4f2a10f34cad8ce83ea42c93bb75
 - name: github.com/json-iterator/go
-  version: e7c7f3b33712573affdcc7a107218e7926b9a05b
+  version: 7b060ec866c0d20af834ee3bb4bc5378bcfb3031
 - name: github.com/mattn/go-isatty
   version: 6ca4dbf54d38eea1a992b3c722a76a5d1c4cb25c
 - name: github.com/pierrec/lz4
-  version: ed8d4cc3b461464e69798080a0092bd028910298
+  version: 2fcda4cb7018ce05a25959d2fe08c83e3329f169
 - name: github.com/pierrec/xxHash
   version: a0006b13c722f7f12368c00a3d3c2ae8a999a0c6
   subpackages:
   - xxHash32
 - name: github.com/rcrowley/go-metrics
-  version: 8732c616f52954686704c8645fe1a9d59e9df7c1
+  version: e181e095bae94582363434144c61a9653aff6e50
   subpackages:
   - exp
 - name: github.com/remerge/cue
-  version: 28dfe61cfc192ac3fce01cdead089ff01549cdfd
+  version: 5ce627d813ef214d807f1a0ce88bf1ab48bf1f1c
   subpackages:
   - collector
   - format
   - hosted
 - name: github.com/remerge/go-env
-  version: 0274550cec6bb707fa7eff2d2f609938e6d449d6
+  version: 4de48725234fac1aff0d580ef3215c5efe1b41c1
 - name: github.com/remerge/go-lock_free_timer
-  version: 3b39b49d2c6ad6286d6f0f392ffecc533d2623f9
+  version: 198222a260ed873fd60f4b6014bcf4b550dcf01f
 - name: github.com/remerge/go-timestr
-  version: 26332ce36f5a67b310a11bb4ae1bde239cf31ab3
+  version: 6d104352246ec1352a09c681f5ea4dd2335a71e8
 - name: github.com/remerge/go-tracker
-  version: 5b85a203e0562f601f98692ff956d5b90f58572e
+  version: e9f519cc25f113efba9502f0924c9bebfad4c573
 - name: github.com/remerge/go-xorshift
-  version: 38a062789887270f4b85fd03a1756560552eed97
+  version: 930dc4b93c3a7faa6e3558a5b755ec6d9b536aa4
 - name: github.com/Shopify/sarama
-  version: 96fcca46d0dda9f7f01d40f87b7c3bc6fb95fb56
+  version: d5db63578d3ea401034698009e8fb88e31951962
 - name: github.com/spf13/cobra
-  version: be77323fc05148ef091e83b3866c0d47c8e74a8b
+  version: ccaecb155a2177302cb56cae929251a256d0f646
 - name: github.com/spf13/pflag
-  version: 6a877ebacf28c5fc79846f4fcd380a5d9872b997
+  version: 4c012f6dcd9546820e378d0bdda4d8fc772cdfea
+- name: github.com/stretchr/testify
+  version: 12b6f73e6084dad08a7c6e575284b177ecafbc71
+  subpackages:
+  - assert
+  - require
 - name: github.com/tylerb/graceful
   version: d72b0151351a13d0421b763b88f791469c4f5dc7
 - name: github.com/ugorji/go
-  version: b5b949564861e43a03568a0b134c135cf318e5c8
+  version: 0e0d6e869525973a9b36093f6ddc9d91b9fc2d71
   subpackages:
   - codec
 - name: golang.org/x/net
-  version: f5dfe339be1d06f81b22525fe34671ee7d2c8904
+  version: d866cfc389cec985d6fda2859936a575a55a3ab6
   subpackages:
   - context
 - name: golang.org/x/sys
-  version: 37707fdb30a5b38865cfb95e5aab41707daec7fd
+  version: d818ba11af4465e00c1998bd3f8a55603b422290
   subpackages:
   - unix
 - name: gopkg.in/go-playground/validator.v8
   version: 5f1438d3fca68893a817e4a66806cea46a9e4ebf
 - name: gopkg.in/yaml.v2
-  version: d670f9405373e636a5a2765eea47fac0c9bc91a4
-testImports: []
+  version: 287cf08546ab5e7e37d55a84f7ed3fd1db036de5
+testImports:
+- name: github.com/pmezard/go-difflib
+  version: 792786c7400a136282c1664665ae0a8db921c6c2
+  subpackages:
+  - difflib
