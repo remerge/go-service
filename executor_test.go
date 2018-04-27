@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"os"
 	"testing"
 	"time"
@@ -13,10 +14,12 @@ type testService struct {
 	initCalled     bool
 	runCalled      bool
 	shutdownCalled bool
+	runError       error
 }
 
-func newTestService() *testService {
+func newTestService(runError error) *testService {
 	s := &testService{}
+	s.runError = runError
 	s.Executor = NewExecutor("test_service", s)
 	return s
 }
@@ -29,15 +32,23 @@ func (s *testService) Init() error {
 func (s *testService) Run() error {
 	time.Sleep(time.Second)
 	s.runCalled = true
-	return nil
+	return s.runError
 }
 
 func (s *testService) Shutdown(sig os.Signal) {
 	s.shutdownCalled = true
 }
 
+func TestExecutionWithErrorOnRun(t *testing.T) {
+	subject := newTestService(errors.New("Run error"))
+	subject.Execute()
+	require.True(t, subject.initCalled)
+	require.True(t, subject.runCalled)
+	require.True(t, subject.shutdownCalled)
+}
+
 func TestExecutionWithoutReadyChannel(t *testing.T) {
-	subject := newTestService()
+	subject := newTestService(nil)
 	subject.Execute()
 	require.True(t, subject.initCalled)
 	require.True(t, subject.runCalled)
@@ -45,7 +56,7 @@ func TestExecutionWithoutReadyChannel(t *testing.T) {
 }
 
 func TestExecutionWithReadyChannel(t *testing.T) {
-	subject := newTestService()
+	subject := newTestService(nil)
 	go subject.Execute()
 	_, ok := <-subject.Ready()
 	require.True(t, ok)

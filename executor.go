@@ -184,7 +184,7 @@ func (s *Executor) buildCommand() *cobra.Command {
 		go func() {
 			err := s.run()
 			if err != nil {
-				s.Log.Panic(err, "Error during service run")
+				_ = s.Log.Error(err, "Error during service run")
 			}
 			done <- true
 		}()
