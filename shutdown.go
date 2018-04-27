@@ -13,15 +13,17 @@ import (
 
 type shutdownFunc func(sig os.Signal)
 
+var signalChannel chan os.Signal
+
 // WaitForShutdown registers signal handlers for SIGHUP, SIGINT, SIGQUIT and
 // SIGTERM and shuts down the service on notification.
 func waitForShutdown(handler shutdownFunc, done chan bool) {
 	timeout := time.Minute
 
-	ch := make(chan os.Signal, 2)
+	signalChannel = make(chan os.Signal, 2)
 
 	signal.Notify(
-		ch,
+		signalChannel,
 		syscall.SIGHUP,
 		syscall.SIGINT,
 		syscall.SIGQUIT,
@@ -30,7 +32,7 @@ func waitForShutdown(handler shutdownFunc, done chan bool) {
 
 	var signal os.Signal
 	select {
-	case sig := <-ch:
+	case sig := <-signalChannel:
 		signal = sig
 	case <-done:
 		signal = syscall.SIGQUIT
