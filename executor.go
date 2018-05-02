@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
+	"github.com/rcrowley/go-metrics"
 	"github.com/remerge/cue"
 	"github.com/remerge/cue/hosted"
 	env "github.com/remerge/go-env"
@@ -37,6 +38,8 @@ type Executor struct {
 
 	Tracker *tracker
 	Server  *server
+
+	promMetrics *PrometheusMetrics
 }
 
 // NewExecutor creates new basic executor
@@ -47,6 +50,7 @@ func NewExecutor(name string, service Service) *Executor {
 	s.Log = NewLogger(name)
 	s.Command = s.buildCommand()
 	s.readyC = make(chan struct{}, 1)
+	s.promMetrics = NewPrometheusMetrics(metrics.DefaultRegistry, s.Name)
 	return s
 }
 

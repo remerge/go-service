@@ -293,6 +293,11 @@ func (s *Executor) serveDebug(port int) {
 		panic("test panic")
 	})
 
+	s.Server.Debug.Engine.GET("/prometheus", func(c *gin.Context) {
+		c.Header("Content-Type", "text/plain; version=0.0.4")
+		c.String(http.StatusOK, s.promMetrics.String())
+	})
+
 	s.Server.Debug.Server = &graceful.Server{
 		Timeout:          s.Server.ShutdownTimeout,
 		NoSignalHandling: true,
