@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	metrics "github.com/rcrowley/go-metrics"
+	"github.com/rcrowley/go-metrics"
 	"github.com/remerge/go-lock_free_timer"
 )
 
@@ -182,67 +182,67 @@ func registerRuntimeMemStats(r metrics.Registry) {
 	runtimeMetrics.NumThread = metrics.NewGauge()
 	runtimeMetrics.ReadMemStats = lft.NewLockFreeTimer()
 
-	_ = r.Register("go.runtime mem_stat_alloc",
+	_ = r.Register("go_runtime mem_stat_alloc",
 		runtimeMetrics.MemStats.Alloc)
-	_ = r.Register("go.runtime mem_stat_buck_hash_sys",
+	_ = r.Register("go_runtime mem_stat_buck_hash_sys",
 		runtimeMetrics.MemStats.BuckHashSys)
-	_ = r.Register("go.runtime mem_stat_debug_gc",
+	_ = r.Register("go_runtime mem_stat_debug_gc",
 		runtimeMetrics.MemStats.DebugGC)
-	_ = r.Register("go.runtime mem_stat_enable_gc",
+	_ = r.Register("go_runtime mem_stat_enable_gc",
 		runtimeMetrics.MemStats.EnableGC)
-	_ = r.Register("go.runtime mem_stat_frees",
+	_ = r.Register("go_runtime mem_stat_frees",
 		runtimeMetrics.MemStats.Frees)
-	_ = r.Register("go.runtime mem_stat_heap_alloc",
+	_ = r.Register("go_runtime mem_stat_heap_alloc",
 		runtimeMetrics.MemStats.HeapAlloc)
-	_ = r.Register("go.runtime mem_stat_heap_idle",
+	_ = r.Register("go_runtime mem_stat_heap_idle",
 		runtimeMetrics.MemStats.HeapIdle)
-	_ = r.Register("go.runtime mem_stat_heap_inuse",
+	_ = r.Register("go_runtime mem_stat_heap_inuse",
 		runtimeMetrics.MemStats.HeapInuse)
-	_ = r.Register("go.runtime mem_stat_heap_objects",
+	_ = r.Register("go_runtime mem_stat_heap_objects",
 		runtimeMetrics.MemStats.HeapObjects)
-	_ = r.Register("go.runtime mem_stat_heap_released",
+	_ = r.Register("go_runtime mem_stat_heap_released",
 		runtimeMetrics.MemStats.HeapReleased)
-	_ = r.Register("go.runtime mem_stat_heap_sys",
+	_ = r.Register("go_runtime mem_stat_heap_sys",
 		runtimeMetrics.MemStats.HeapSys)
-	_ = r.Register("go.runtime mem_stat_last_gc",
+	_ = r.Register("go_runtime mem_stat_last_gc",
 		runtimeMetrics.MemStats.LastGC)
-	_ = r.Register("go.runtime mem_stat_lookups",
+	_ = r.Register("go_runtime mem_stat_lookups",
 		runtimeMetrics.MemStats.Lookups)
-	_ = r.Register("go.runtime mem_stat_m_allocs",
+	_ = r.Register("go_runtime mem_stat_m_allocs",
 		runtimeMetrics.MemStats.Mallocs)
-	_ = r.Register("go.runtime mem_stat_m_cache_inuse",
+	_ = r.Register("go_runtime mem_stat_m_cache_inuse",
 		runtimeMetrics.MemStats.MCacheInuse)
-	_ = r.Register("go.runtime mem_stat_m_cache_sys",
+	_ = r.Register("go_runtime mem_stat_m_cache_sys",
 		runtimeMetrics.MemStats.MCacheSys)
-	_ = r.Register("go.runtime mem_stat_m_span_inuse",
+	_ = r.Register("go_runtime mem_stat_m_span_inuse",
 		runtimeMetrics.MemStats.MSpanInuse)
-	_ = r.Register("go.runtime mem_stat_m_span_sys",
+	_ = r.Register("go_runtime mem_stat_m_span_sys",
 		runtimeMetrics.MemStats.MSpanSys)
-	_ = r.Register("go.runtime mem_stat_next_gc",
+	_ = r.Register("go_runtime mem_stat_next_gc",
 		runtimeMetrics.MemStats.NextGC)
-	_ = r.Register("go.runtime mem_stat_num_gc",
+	_ = r.Register("go_runtime mem_stat_num_gc",
 		runtimeMetrics.MemStats.NumGC)
-	_ = r.Register("go.runtime mem_stat_gc_cpu_fraction",
+	_ = r.Register("go_runtime mem_stat_gc_cpu_fraction",
 		runtimeMetrics.MemStats.GCCPUFraction)
-	_ = r.Register("go.runtime mem_stat_pause_ns",
+	_ = r.Register("go_runtime mem_stat_pause_ns",
 		runtimeMetrics.MemStats.PauseNs)
-	_ = r.Register("go.runtime mem_stat_pause_total_ns",
+	_ = r.Register("go_runtime mem_stat_pause_total_ns",
 		runtimeMetrics.MemStats.PauseTotalNs)
-	_ = r.Register("go.runtime mem_stat_stack_inuse",
+	_ = r.Register("go_runtime mem_stat_stack_inuse",
 		runtimeMetrics.MemStats.StackInuse)
-	_ = r.Register("go.runtime mem_stat_stack_sys",
+	_ = r.Register("go_runtime mem_stat_stack_sys",
 		runtimeMetrics.MemStats.StackSys)
-	_ = r.Register("go.runtime mem_stat_sys",
+	_ = r.Register("go_runtime mem_stat_sys",
 		runtimeMetrics.MemStats.Sys)
-	_ = r.Register("go.runtime mem_stat_total_alloc",
+	_ = r.Register("go_runtime mem_stat_total_alloc",
 		runtimeMetrics.MemStats.TotalAlloc)
-	_ = r.Register("go.runtime num_cgo_call",
+	_ = r.Register("go_runtime num_cgo_call",
 		runtimeMetrics.NumCgoCall)
-	_ = r.Register("go.runtime num_goroutine",
+	_ = r.Register("go_runtime num_goroutine",
 		runtimeMetrics.NumGoroutine)
-	_ = r.Register("go.runtime num_thread",
+	_ = r.Register("go_runtime num_thread",
 		runtimeMetrics.NumThread)
-	_ = r.Register("go.runtime read_mem_stats",
+	_ = r.Register("go_runtime read_mem_stats",
 		runtimeMetrics.ReadMemStats)
 }
 

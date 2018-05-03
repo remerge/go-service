@@ -9,15 +9,6 @@ import (
 )
 
 func TestPrometheusMetrics_Update(t *testing.T) {
-	t.Run(`bad label`, func(t *testing.T) {
-		r := metrics.NewRegistry()
-		p := service.NewPrometheusMetrics(r, "test")
-		metrics.GetOrRegisterCounter("app,bad a", r)
-		assert.EqualError(t, p.Update(2000), "[bad label \"bad\" in metric \"app,bad a\"]")
-		assert.Equal(t, `# ERROR bad label "bad" in metric "app,bad a"
-`, p.String())
-	})
-
 	t.Run(`empty`, func(t *testing.T) {
 		r := metrics.NewRegistry()
 		p := service.NewPrometheusMetrics(r, "test")
@@ -115,5 +106,39 @@ app_with_label_total{service="test",l1="1"} 4 2000
 app_with_label_total{service="test",l1="2"} 5 2000
 `, p.String())
 	})
+	for _, td := range [][4]string{
+		{
+			`bad label`,
+			"app,bad a",
+			"[bad label \"bad\" in metric \"app,bad a\"]",
+			"# ERROR bad label \"bad\" in metric \"app,bad a\"\n",
+		},
+		{
+			"bad prefix",
+			"app.1,label=1 a",
+			"[bad metric name \"app.1_a\" in metric \"app.1,label=1 a\"]",
+			"# ERROR bad metric name \"app.1_a\" in metric \"app.1,label=1 a\"\n",
+		},
+		{
+			"bad name",
+			"app_1,label=1 a.3",
+			"[bad metric name \"app_1_a.3\" in metric \"app_1,label=1 a.3\"]",
+			"# ERROR bad metric name \"app_1_a.3\" in metric \"app_1,label=1 a.3\"\n",
+		},
+		{
+			"bad label name",
+			"app_1,label.1=1 a_3",
+			"[bad label name \"label.1=1\" in metric \"app_1,label.1=1 a_3\"]",
+			"# ERROR bad label name \"label.1=1\" in metric \"app_1,label.1=1 a_3\"\n",
+		},
+	} {
+		t.Run(td[0], func(t *testing.T) {
+			r := metrics.NewRegistry()
+			p := service.NewPrometheusMetrics(r, "test")
+			metrics.GetOrRegisterCounter(td[1], r)
+			assert.EqualError(t, p.Update(2000), td[2])
+			assert.Equal(t, td[3], p.String())
+		})
 
+	}
 }

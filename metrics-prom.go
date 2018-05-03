@@ -3,11 +3,17 @@ package service
 import (
 	"bytes"
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
 
 	"github.com/rcrowley/go-metrics"
+)
+
+var (
+	promMetricRe      = regexp.MustCompile(`^[a-zA-Z_:][a-zA-Z0-9_:]*$`)
+	promMetricLabelRe = regexp.MustCompile(`^[a-zA-Z0-9_]*$`)
 )
 
 type metricsSampler interface {
@@ -228,15 +234,21 @@ func (p *PrometheusMetrics) addV(v map[string][][2]string, bind, fullname string
 func (p *PrometheusMetrics) extractSignature(raw string) (name, labels string, err error) {
 	var split, lSplit []string
 	if split = strings.Split(raw, " "); len(split) != 2 {
-		err = fmt.Errorf(`bad metric signature "%s"`, raw)
-		return
+		return "", "", fmt.Errorf(`bad metric signature "%s"`, raw)
 	}
 	name = split[1]
 	split = strings.Split(split[0], ",")
 	name = split[0] + "_" + name
+	if !promMetricRe.MatchString(name) {
+		return "", "", fmt.Errorf(`bad metric name "%s" in metric "%s"`, name, raw)
+	}
+
 	for _, l := range split[1:] {
 		if lSplit = strings.Split(l, "="); len(lSplit) != 2 {
 			return "", "", fmt.Errorf(`bad label "%s" in metric "%s"`, l, raw)
+		}
+		if !promMetricLabelRe.MatchString(lSplit[0]) {
+			return "", "", fmt.Errorf(`bad label name "%s" in metric "%s"`, l, raw)
 		}
 		labels += fmt.Sprintf(`,%s="%s"`, lSplit[0], lSplit[1])
 	}
