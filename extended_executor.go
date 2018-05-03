@@ -254,8 +254,6 @@ func (s *Executor) serveDebug(port int) {
 	// expvar & go-metrics
 	s.Server.Debug.Engine.GET("/vars",
 		gin.WrapH(exp.ExpHandler(metrics.DefaultRegistry)))
-	s.Server.Debug.Engine.GET("/metrics",
-		gin.WrapH(exp.ExpHandler(metrics.DefaultRegistry)))
 
 	// wrap pprof in gin
 	s.Server.Debug.Engine.GET("/pprof/",
@@ -293,7 +291,7 @@ func (s *Executor) serveDebug(port int) {
 		panic("test panic")
 	})
 
-	s.Server.Debug.Engine.GET("/prometheus", func(c *gin.Context) {
+	s.Server.Debug.Engine.GET("/metrics", func(c *gin.Context) {
 		c.Header("Content-Type", "text/plain; version=0.0.4")
 		c.String(http.StatusOK, s.promMetrics.String())
 	})
