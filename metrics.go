@@ -282,7 +282,7 @@ func (s *Executor) flushMetrics(freq time.Duration) {
 			s.flushMetric(name, i, ts, writeCb)
 		})
 		if flushErr := s.promMetrics.Update(time.Now().Unix()); flushErr != nil {
-			_ = s.Log.Error(flushErr, "failures while collect metrics")
+			s.Log.Warnf("failures while collect metrics: %v", flushErr)
 		}
 	}
 }
