@@ -63,63 +63,63 @@ Counters are represented as "XXX_counter" as well as "XXX_total" for
 compatibility reasons:
 
 	# TYPE app_c1_count counter
-	app_c1_count{service="test",l1="2"} 0 2000
-	app_c1_count{service="test",label1="1",label2="2"} 2 2000
+	app_c1_count{service="test",l1="2"} 0
+	app_c1_count{service="test",label1="1",label2="2"} 2
 
 	# TYPE app_c1_total counter
-	app_c1_total{service="test",l1="2"} 0 2000
-	app_c1_total{service="test",label1="1",label2="2"} 2 2000
+	app_c1_total{service="test",l1="2"} 0
+	app_c1_total{service="test",label1="1",label2="2"} 2
 
 Both int and float Gauges are represented as gauges:
 
 	# TYPE app_g1 gauge
-	app_g1{service="test",l1="1"} 0 2000
-	app_g1{service="test",l1="2"} 0 2000
+	app_g1{service="test",l1="1"} 0
+	app_g1{service="test",l1="2"} 0
 
 Timers and Histograms are represented as Prometheus summaries (see below):
 
 	# TYPE app_h1 summary
-	app_h1_count{service="test",l1="1"} 0 2000
-	app_h1_sum{service="test",l1="1"} 0 2000
-	app_h1{service="test",l1="1",quantile="0.5"} 0 2000
-	app_h1{service="test",l1="1",quantile="0.75"} 0 2000
-	app_h1{service="test",l1="1",quantile="0.95"} 0 2000
-	app_h1{service="test",l1="1",quantile="0.99"} 0 2000
-	app_h1{service="test",l1="1",quantile="0.999"} 0 2000
+	app_h1_count{service="test",l1="1"} 0
+	app_h1_sum{service="test",l1="1"} 0
+	app_h1{service="test",l1="1",quantile="0.5"} 0
+	app_h1{service="test",l1="1",quantile="0.75"} 0
+	app_h1{service="test",l1="1",quantile="0.95"} 0
+	app_h1{service="test",l1="1",quantile="0.99"} 0
+	app_h1{service="test",l1="1",quantile="0.999"} 0
 
 	# TYPE app_h1_max gauge
-	app_h1_max{service="test",l1="1"} 0 2000
+	app_h1_max{service="test",l1="1"} 0
 
 	# TYPE app_h1_mean gauge
-	app_h1_mean{service="test",l1="1"} 0 2000
+	app_h1_mean{service="test",l1="1"} 0
 
 	# TYPE app_h1_min gauge
-	app_h1_min{service="test",l1="1"} 0 2000
+	app_h1_min{service="test",l1="1"} 0
 
 	# TYPE app_h1_p75 gauge
-	app_h1_p75{service="test",l1="1"} 0 2000
+	app_h1_p75{service="test",l1="1"} 0
 
 	# TYPE app_h1_p95 gauge
-	app_h1_p95{service="test",l1="1"} 0 2000
+	app_h1_p95{service="test",l1="1"} 0
 
 	# TYPE app_h1_p99 gauge
-	app_h1_p99{service="test",l1="1"} 0 2000
+	app_h1_p99{service="test",l1="1"} 0
 
 	# TYPE app_h1_p999 gauge
-	app_h1_p999{service="test",l1="1"} 0 2000
+	app_h1_p999{service="test",l1="1"} 0
 
 	# TYPE app_h1_stddev gauge
-	app_h1_stddev{service="test",l1="1"} 0 2000
+	app_h1_stddev{service="test",l1="1"} 0
 
 Meters are represented as counters (see above):
 
 	# TYPE app_m1_count counter
-	app_m1_count{service="test",l1="1"} 0 2000
+	app_m1_count{service="test",l1="1"} 0
 
 	# TYPE app_m1_total counter
-	app_m1_total{service="test",l1="1"} 0 2000
+	app_m1_total{service="test",l1="1"} 0
 */
-func (p *PrometheusMetrics) Update(ts int64) (err error) {
+func (p *PrometheusMetrics) Update() (err error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
@@ -159,10 +159,10 @@ func (p *PrometheusMetrics) Update(ts int64) (err error) {
 			p.addSummary(mTypes, mValues, name, labels, m1.Snapshot())
 		}
 	})
-	return p.writeData(failures, mTypes, mValues, ts)
+	return p.writeData(failures, mTypes, mValues)
 }
 
-func (p *PrometheusMetrics) writeData(failures []string, t map[string]string, v map[string][][2]string, ts int64) (err error) {
+func (p *PrometheusMetrics) writeData(failures []string, t map[string]string, v map[string][][2]string) (err error) {
 	p.cache.Reset()
 
 	// write failures
@@ -187,7 +187,7 @@ func (p *PrometheusMetrics) writeData(failures []string, t map[string]string, v 
 			return v[name][i][0] < v[name][j][0]
 		})
 		for _, value := range v[name] {
-			if _, err = fmt.Fprintf(&p.cache, "%s %s %d\n", value[0], value[1], ts); err != nil {
+			if _, err = fmt.Fprintf(&p.cache, "%s %s\n", value[0], value[1]); err != nil {
 				return err
 			}
 		}
@@ -199,7 +199,7 @@ func (p *PrometheusMetrics) writeData(failures []string, t map[string]string, v 
 	return nil
 }
 
-func (p *PrometheusMetrics) addSummary(t map[string]string, v map[string][][2]string, name, labels string, sampler metricsSampler)  {
+func (p *PrometheusMetrics) addSummary(t map[string]string, v map[string][][2]string, name, labels string, sampler metricsSampler) {
 	t[name] = "summary"
 	p.addV(v, name, p.fullName(name+"_count", labels), sampler.Count())
 	p.addV(v, name, p.fullName(name+"_sum", labels), sampler.Sum())
