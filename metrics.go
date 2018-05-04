@@ -281,7 +281,7 @@ func (s *Executor) flushMetrics(freq time.Duration) {
 		metrics.DefaultRegistry.Each(func(name string, i interface{}) {
 			s.flushMetric(name, i, ts, writeCb)
 		})
-		if flushErr := s.promMetrics.Update(time.Now().Unix()); flushErr != nil {
+		if flushErr := s.promMetrics.Update(); flushErr != nil {
 			s.Log.Warnf("failures while collect metrics: %v", flushErr)
 		}
 	}
