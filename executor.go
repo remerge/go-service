@@ -23,6 +23,7 @@ type Executor struct {
 	// Sends nil when inited worked correctly, or error otherwize
 	// You can use it to be notified the end of init
 	readyC chan struct{}
+	stopC  chan struct{}
 
 	Name        string
 	Description string
@@ -50,8 +51,20 @@ func NewExecutor(name string, service Service) *Executor {
 	s.Log = NewLogger(name)
 	s.Command = s.buildCommand()
 	s.readyC = make(chan struct{}, 1)
+	s.stopC = make(chan struct{})
 	s.promMetrics = NewPrometheusMetrics(metrics.DefaultRegistry, s.Name)
 	return s
+}
+
+// StopChan gets the stop channel which will block until
+// stopping has completed, at which point it is closed.
+// Callers should never close the stop channel.
+func (s *Executor) StopChan() <-chan struct{} {
+	return s.stopC
+}
+
+func (s *Executor) WaitForShutdown() {
+	<-s.stopC
 }
 
 func (s *Executor) run() error {
@@ -119,6 +132,7 @@ func (s *Executor) init() error {
 	return s.service.Init()
 }
 
+// Ready returns channel that signals that service is inited
 func (s *Executor) Ready() <-chan struct{} {
 	return s.readyC
 }
@@ -205,6 +219,7 @@ func (s *Executor) shutdown(sig os.Signal) {
 	s.service.Shutdown(sig)
 	s.extendedShutdown(sig)
 	close(s.readyC)
+	close(s.stopC)
 	v := "none (normal termination)"
 	if sig != nil {
 		v = sig.String()
