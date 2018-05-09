@@ -238,7 +238,7 @@ func (p *PrometheusMetrics) extractSignature(raw string) (name, labels string, e
 	}
 	name = split[1]
 	split = strings.Split(split[0], ",")
-	name = split[0] + "_" + name
+	name = prometheusMetricName(split[0] + "_" + name)
 	if !promMetricRe.MatchString(name) {
 		return "", "", fmt.Errorf(`bad metric name "%s" in metric "%s"`, name, raw)
 	}
@@ -250,11 +250,15 @@ func (p *PrometheusMetrics) extractSignature(raw string) (name, labels string, e
 		if !promMetricLabelRe.MatchString(lSplit[0]) {
 			return "", "", fmt.Errorf(`bad label name "%s" in metric "%s"`, l, raw)
 		}
-		labels += fmt.Sprintf(`,%s="%s"`, lSplit[0], lSplit[1])
+		labels += fmt.Sprintf(`,%s="%s"`, prometheusMetricName(lSplit[0]), lSplit[1])
 	}
 	return name, labels, nil
 }
 
 func (p *PrometheusMetrics) fullName(name, labels string) (f string) {
 	return fmt.Sprintf("%s{%s%s}", name, p.nameLabel, labels)
+}
+
+func prometheusMetricName(in string) (out string) {
+	return strings.Replace(in, "-", "_", -1)
 }

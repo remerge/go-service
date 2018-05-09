@@ -91,7 +91,7 @@ app_t1_stddev{service="test"} 0
 	t.Run("counter", func(t *testing.T) {
 		r := metrics.NewRegistry()
 		metrics.GetOrRegisterCounter("app no_label", r).Inc(2)
-		metrics.GetOrRegisterCounter("app,l1=1 with_label", r).Inc(4)
+		metrics.GetOrRegisterCounter("app,l1=1 with-label", r).Inc(4)
 		metrics.GetOrRegisterCounter("app,l1=2 with_label", r).Inc(5)
 
 		p := service.NewPrometheusMetrics(r, "test")
