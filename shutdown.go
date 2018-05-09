@@ -17,7 +17,7 @@ var signalChannel chan os.Signal
 
 // WaitForShutdown registers signal handlers for SIGHUP, SIGINT, SIGQUIT and
 // SIGTERM and shuts down the service on notification.
-func waitForShutdown(handler shutdownFunc, done chan bool) {
+func waitForShutdown(handler shutdownFunc, done chan struct{}) {
 	timeout := time.Minute
 
 	signalChannel = make(chan os.Signal, 2)

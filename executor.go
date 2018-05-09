@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"sync/atomic"
 	"time"
 
 	"github.com/Shopify/sarama"
@@ -24,6 +25,7 @@ type Executor struct {
 	// You can use it to be notified the end of init
 	readyC chan struct{}
 	stopC  chan struct{}
+	doneC  chan struct{}
 
 	Name        string
 	Description string
@@ -33,14 +35,15 @@ type Executor struct {
 	Rollbar       hosted.Rollbar
 	StatsDAddress string
 
-	Debug struct {
-		Active bool
-	}
-
 	Tracker *tracker
 	Server  *server
 
 	promMetrics *PrometheusMetrics
+
+	doneClosed int32
+	Debug      struct {
+		Active bool
+	}
 }
 
 // NewExecutor creates new basic executor
@@ -50,8 +53,10 @@ func NewExecutor(name string, service Service) *Executor {
 	s.Name = name
 	s.Log = NewLogger(name)
 	s.Command = s.buildCommand()
+
 	s.readyC = make(chan struct{}, 1)
 	s.stopC = make(chan struct{})
+	s.doneC = make(chan struct{})
 	s.promMetrics = NewPrometheusMetrics(metrics.DefaultRegistry, s.Name)
 	return s
 }
@@ -197,20 +202,25 @@ func (s *Executor) buildCommand() *cobra.Command {
 		}
 	}
 	cmd.Run = func(cmd *cobra.Command, args []string) {
-		done := make(chan bool)
-
 		go func() {
 			err := s.run()
 			if err != nil {
 				_ = s.Log.Error(err, "Error during service run")
 			}
-			done <- true
+			s.Stop()
 		}()
 
-		waitForShutdown(s.shutdown, done)
+		waitForShutdown(s.shutdown, s.doneC)
 	}
 
 	return cmd
+}
+
+// Stop stops the executor and forces shutdown
+func (s *Executor) Stop() {
+	if atomic.CompareAndSwapInt32(&s.doneClosed, 0, 1) {
+		close(s.doneC)
+	}
 }
 
 // Shutdown shuts down all HTTP servers (see `ShutdownServers`), the tracker
@@ -220,6 +230,8 @@ func (s *Executor) shutdown(sig os.Signal) {
 	s.extendedShutdown(sig)
 	close(s.readyC)
 	close(s.stopC)
+	s.Stop()
+
 	v := "none (normal termination)"
 	if sig != nil {
 		v = sig.String()

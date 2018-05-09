@@ -57,3 +57,19 @@ func TestSignalShutdown(t *testing.T) {
 	require.Equal(t, 1, subject.shutdownCount)
 	require.True(t, subject.runFinished)
 }
+
+func TestShutdownOnStop(t *testing.T) {
+	subject := newLockingService(t)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		subject.Execute()
+	}()
+	time.Sleep(time.Second)
+	subject.Stop()
+	wg.Wait()
+	time.Sleep(time.Second)
+	require.Equal(t, 1, subject.shutdownCount)
+	require.True(t, subject.runFinished)
+}
