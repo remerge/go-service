@@ -189,7 +189,7 @@ func (s *Executor) buildCommand() *cobra.Command {
 		},
 	})
 
-	cmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
+	cmd.PreRun = func(cmd *cobra.Command, args []string) {
 		err := s.init()
 		s.readyC <- struct{}{}
 		if err != nil {
