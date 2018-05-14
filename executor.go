@@ -210,17 +210,19 @@ func (s *Executor) buildCommand() *cobra.Command {
 			s.Stop()
 		}()
 
-		waitForShutdown(s.shutdown, s.doneC)
+		waitForShutdown(s.Log, s.shutdown, s.doneC)
 	}
 
 	return cmd
 }
 
 // Stop stops the executor and forces shutdown
+// Exits only when the service is stopped
 func (s *Executor) Stop() {
 	if atomic.CompareAndSwapInt32(&s.doneClosed, 0, 1) {
 		close(s.doneC)
 	}
+	s.WaitForShutdown()
 }
 
 // Shutdown shuts down all HTTP servers (see `ShutdownServers`), the tracker
@@ -229,17 +231,22 @@ func (s *Executor) shutdown(sig os.Signal) {
 	s.service.Shutdown(sig)
 	s.extendedShutdown(sig)
 	close(s.readyC)
-	close(s.stopC)
-	s.Stop()
+	if atomic.CompareAndSwapInt32(&s.doneClosed, 0, 1) {
+		close(s.doneC)
+	}
 
 	v := "none (normal termination)"
 	if sig != nil {
 		v = sig.String()
 	}
 	s.Log.WithValue("signal", v).Info("service shutdown")
-	_, _ = os.Create("cache/.shutdown_done")
+	_, err := os.Create("cache/.shutdown_done")
+	if err != nil {
+		_ = s.Log.Errorf(err, "Error creating shutdown file")
+	}
 
 	// flush cue buffers
 	_ = cue.Close(5 * time.Second)
 	s.Log.Info("shutdown done")
+	close(s.stopC)
 }
