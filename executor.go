@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -195,8 +196,17 @@ func (s *Executor) buildCommand() *cobra.Command {
 	})
 
 	cmd.PreRun = func(cmd *cobra.Command, args []string) {
-		err := s.init()
-		s.readyC <- struct{}{}
+		var wg sync.WaitGroup
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			err := s.init()
+			s.readyC <- struct{}{}
+			if err != nil {
+				s.Log.Panic(err, "Error during service init")
+			}
+		}()
+		err := waitTimeout(&wg, time.Minute*5)
 		if err != nil {
 			s.Log.Panic(err, "Error during service init")
 		}
@@ -214,6 +224,21 @@ func (s *Executor) buildCommand() *cobra.Command {
 	}
 
 	return cmd
+}
+
+// nolint: unparam
+func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) error {
+	c := make(chan struct{})
+	go func() {
+		defer close(c)
+		wg.Wait()
+	}()
+	select {
+	case <-c:
+		return nil
+	case <-time.After(timeout):
+		return fmt.Errorf("Timeout after %v", timeout)
+	}
 }
 
 // Stop stops the executor and forces shutdown
