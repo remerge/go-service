@@ -2,11 +2,87 @@ package service_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/rcrowley/go-metrics"
 	"github.com/remerge/go-service"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestPrometheusMetrics_UpdateWithHistogramAndTimerEvent(t *testing.T) {
+	r := metrics.NewRegistry()
+	metrics.GetOrRegisterCounter("app,l1=2 c1", r)
+	metrics.GetOrRegisterCounter("app c2", r).Inc(3)
+	metrics.GetOrRegisterGaugeFloat64("app,l1=2 g1", r)
+	metrics.GetOrRegisterGauge("app,l1=1 g1", r)
+	h := metrics.GetOrRegisterHistogram("app,l1=1 h1", r, metrics.NewUniformSample(104))
+	h.Update(42)
+	metrics.GetOrRegisterMeter("app,l1=1 m1", r)
+	timer := metrics.GetOrRegisterTimer("app t1", r)
+	timer.Update(time.Second)
+	metrics.GetOrRegisterCounter("app,label1=1,label2=2 c1", r).Inc(2)
+
+	p := service.NewPrometheusMetrics(r, "test")
+	assert.NoError(t, p.Update())
+
+	assert.Equal(t, `
+# TYPE app_c1_total counter
+app_c1_total{service="test",l1="2"} 0
+app_c1_total{service="test",label1="1",label2="2"} 2
+
+# TYPE app_c2_total counter
+app_c2_total{service="test"} 3
+
+# TYPE app_g1 gauge
+app_g1{service="test",l1="1"} 0
+app_g1{service="test",l1="2"} 0
+
+# TYPE app_h1 summary
+app_h1_count{service="test",l1="1"} 1
+app_h1_sum{service="test",l1="1"} 42
+app_h1{service="test",l1="1",quantile="0.5"} 42
+app_h1{service="test",l1="1",quantile="0.75"} 42
+app_h1{service="test",l1="1",quantile="0.95"} 42
+app_h1{service="test",l1="1",quantile="0.99"} 42
+app_h1{service="test",l1="1",quantile="0.999"} 42
+
+# TYPE app_h1_max gauge
+app_h1_max{service="test",l1="1"} 42
+
+# TYPE app_h1_mean gauge
+app_h1_mean{service="test",l1="1"} 42
+
+# TYPE app_h1_min gauge
+app_h1_min{service="test",l1="1"} 42
+
+# TYPE app_h1_stddev gauge
+app_h1_stddev{service="test",l1="1"} 0
+
+# TYPE app_m1_total counter
+app_m1_total{service="test",l1="1"} 0
+
+# TYPE app_t1 summary
+app_t1_count{service="test"} 1
+app_t1_sum{service="test"} 1000000000
+app_t1{service="test",quantile="0.5"} 1e+09
+app_t1{service="test",quantile="0.75"} 1e+09
+app_t1{service="test",quantile="0.95"} 1e+09
+app_t1{service="test",quantile="0.99"} 1e+09
+app_t1{service="test",quantile="0.999"} 1e+09
+
+# TYPE app_t1_max gauge
+app_t1_max{service="test"} 1000000000
+
+# TYPE app_t1_mean gauge
+app_t1_mean{service="test"} 1e+09
+
+# TYPE app_t1_min gauge
+app_t1_min{service="test"} 1000000000
+
+# TYPE app_t1_stddev gauge
+app_t1_stddev{service="test"} 0
+`, p.String())
+}
 
 func TestPrometheusMetrics_Update(t *testing.T) {
 	t.Run(`empty`, func(t *testing.T) {
@@ -42,50 +118,8 @@ app_c2_total{service="test"} 3
 app_g1{service="test",l1="1"} 0
 app_g1{service="test",l1="2"} 0
 
-# TYPE app_h1 summary
-app_h1_count{service="test",l1="1"} 0
-app_h1_sum{service="test",l1="1"} 0
-app_h1{service="test",l1="1",quantile="0.5"} 0
-app_h1{service="test",l1="1",quantile="0.75"} 0
-app_h1{service="test",l1="1",quantile="0.95"} 0
-app_h1{service="test",l1="1",quantile="0.99"} 0
-app_h1{service="test",l1="1",quantile="0.999"} 0
-
-# TYPE app_h1_max gauge
-app_h1_max{service="test",l1="1"} 0
-
-# TYPE app_h1_mean gauge
-app_h1_mean{service="test",l1="1"} 0
-
-# TYPE app_h1_min gauge
-app_h1_min{service="test",l1="1"} 0
-
-# TYPE app_h1_stddev gauge
-app_h1_stddev{service="test",l1="1"} 0
-
 # TYPE app_m1_total counter
 app_m1_total{service="test",l1="1"} 0
-
-# TYPE app_t1 summary
-app_t1_count{service="test"} 0
-app_t1_sum{service="test"} 0
-app_t1{service="test",quantile="0.5"} 0
-app_t1{service="test",quantile="0.75"} 0
-app_t1{service="test",quantile="0.95"} 0
-app_t1{service="test",quantile="0.99"} 0
-app_t1{service="test",quantile="0.999"} 0
-
-# TYPE app_t1_max gauge
-app_t1_max{service="test"} 0
-
-# TYPE app_t1_mean gauge
-app_t1_mean{service="test"} 0
-
-# TYPE app_t1_min gauge
-app_t1_min{service="test"} 0
-
-# TYPE app_t1_stddev gauge
-app_t1_stddev{service="test"} 0
 `, p.String())
 	})
 	t.Run("counter", func(t *testing.T) {

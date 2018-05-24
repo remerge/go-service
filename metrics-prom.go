@@ -119,6 +119,7 @@ Meters are represented as counters (see above):
 	# TYPE app_m1_total counter
 	app_m1_total{service="test",l1="1"} 0
 */
+// nolint: gocyclo
 func (p *PrometheusMetrics) Update() (err error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -154,9 +155,19 @@ func (p *PrometheusMetrics) Update() (err error) {
 			}
 			p.addGauge(mTypes, mValues, name, labels, val)
 		case metrics.Histogram:
-			p.addSummary(mTypes, mValues, name, labels, m1.Snapshot())
+			sn := m1.Snapshot()
+			if sn.Count() == 0 {
+				break
+			}
+
+			p.addSummary(mTypes, mValues, name, labels, sn)
 		case metrics.Timer:
-			p.addSummary(mTypes, mValues, name, labels, m1.Snapshot())
+			sn := m1.Snapshot()
+			if sn.Count() == 0 {
+				break
+			}
+
+			p.addSummary(mTypes, mValues, name, labels, sn)
 		}
 	})
 	return p.writeData(failures, mTypes, mValues)

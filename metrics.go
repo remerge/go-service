@@ -287,6 +287,7 @@ func (s *Executor) flushMetrics(freq time.Duration) {
 	}
 }
 
+// nolint: gocyclo
 func (s *Executor) flushMetric(
 	name string,
 	i interface{},
@@ -322,6 +323,10 @@ func (s *Executor) flushMetric(
 		writeCb("%s %serror=%s %d\n", series, prefix, metric.Error(), ts)
 	case metrics.Histogram:
 		sn := metric.Snapshot()
+		if sn.Count() == 0 {
+			break
+		}
+
 		ps := sn.Percentiles([]float64{0.5, 0.75, 0.95, 0.99, 0.999})
 		writeCb("%s %scount=%di %d\n", series, prefix, sn.Count(), ts)
 		writeCb("%s %smin=%di %d\n", series, prefix, sn.Min(), ts)
@@ -342,6 +347,9 @@ func (s *Executor) flushMetric(
 		writeCb("%s %srate_mean=%f %d\n", series, prefix, sn.RateMean(), ts)
 	case metrics.Timer:
 		sn := metric.Snapshot()
+		if sn.Count() == 0 {
+			break
+		}
 		ps := sn.Percentiles([]float64{0.5, 0.75, 0.95, 0.99, 0.999})
 		writeCb("%s %scount=%di %d\n", series, prefix, sn.Count(), ts)
 		writeCb("%s %smin=%di %d\n", series, prefix, sn.Min(), ts)
