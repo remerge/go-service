@@ -1,8 +1,6 @@
 package: github.com/remerge/go-service
+
 import:
-- package: github.com/davecgh/go-spew
-  subpackages:
-  - spew
 - package: github.com/gin-gonic/gin
 - package: github.com/rcrowley/go-metrics
   subpackages:
@@ -12,7 +10,7 @@ import:
 - package: github.com/remerge/cue
 - package: github.com/remerge/go-lock_free_timer
 - package: github.com/cenkalti/backoff
+
+testImport:
 - package: github.com/stretchr/testify
-  version: v1.2.1
-  subpackages:
-  - require
+
