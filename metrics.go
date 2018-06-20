@@ -248,7 +248,7 @@ func registerRuntimeMemStats(r metrics.Registry) {
 
 // nolint: unparam
 func (s *Executor) flushMetrics(freq time.Duration) {
-	registerRuntimeMemStats(metrics.DefaultRegistry)
+	registerRuntimeMemStats(s.metricsRegistry)
 	go captureRuntimeMemStats(freq)
 
 	raddr, err := net.ResolveUDPAddr("udp", s.StatsDAddress)
@@ -278,7 +278,7 @@ func (s *Executor) flushMetrics(freq time.Duration) {
 
 	for range ticker.C {
 		ts := (time.Now().UnixNano() / int64(freq)) * int64(freq)
-		metrics.DefaultRegistry.Each(func(name string, i interface{}) {
+		s.metricsRegistry.Each(func(name string, i interface{}) {
 			s.flushMetric(name, i, ts, writeCb)
 		})
 		if flushErr := s.promMetrics.Update(); flushErr != nil {

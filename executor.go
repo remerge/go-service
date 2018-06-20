@@ -39,7 +39,8 @@ type Executor struct {
 	Tracker *tracker
 	Server  *server
 
-	promMetrics *PrometheusMetrics
+	metricsRegistry metrics.Registry
+	promMetrics     *PrometheusMetrics
 
 	doneClosed int32
 	Debug      struct {
@@ -58,7 +59,7 @@ func NewExecutor(name string, service Service) *Executor {
 	s.readyC = make(chan struct{}, 1)
 	s.stopC = make(chan struct{})
 	s.doneC = make(chan struct{})
-	s.promMetrics = NewPrometheusMetrics(metrics.DefaultRegistry, s.Name)
+	s.metricsRegistry = metrics.DefaultRegistry
 	return s
 }
 
@@ -105,6 +106,7 @@ func (s *Executor) init() error {
 	}
 
 	// background jobs for go-metrics
+	s.promMetrics = NewPrometheusMetrics(s.metricsRegistry, s.Name)
 	if env.IsProd() {
 		go s.flushMetrics(10 * time.Second)
 	}

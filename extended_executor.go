@@ -55,7 +55,8 @@ type server struct {
 	}
 }
 
-// WithServer adds server to extended executor
+// WithServer adds server to extended executor.
+// This method should be called ONCE BEFORE Execute() method.
 func (s *Executor) WithServer(port int) *Executor {
 	s.Server = &server{Port: port}
 
@@ -106,7 +107,8 @@ func (s *Executor) WithServer(port int) *Executor {
 	return s
 }
 
-// WithTracker adds tracker to ExtendedExecutor
+// WithTracker adds tracker to ExtendedExecutor.
+// This method should be called ONCE BEFORE Execute() method.
 func (s *Executor) WithTracker() *Executor {
 	s.Tracker = &tracker{}
 	flags := s.Command.PersistentFlags()
@@ -125,6 +127,13 @@ func (s *Executor) WithTracker() *Executor {
 		"tracker-connect", "0.0.0.0:9092",
 		"connect string for tracker",
 	)
+	return s
+}
+
+// WithMetricsRegistry replaces default metrics registry.
+// This method should be called ONCE BEFORE Execute() method.
+func (s *Executor) WithMetricsRegistry(r metrics.Registry) *Executor {
+	s.metricsRegistry = r
 	return s
 }
 
@@ -253,7 +262,7 @@ func (s *Executor) initDebugEngine() {
 func (s *Executor) serveDebug(port int) {
 	// expvar & go-metrics
 	s.Server.Debug.Engine.GET("/vars",
-		gin.WrapH(exp.ExpHandler(metrics.DefaultRegistry)))
+		gin.WrapH(exp.ExpHandler(s.metricsRegistry)))
 
 	// wrap pprof in gin
 	s.Server.Debug.Engine.GET("/pprof/",
