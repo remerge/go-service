@@ -154,6 +154,13 @@ func (s *Executor) initExtended() error {
 			ginLogger(s.Name),
 		)
 	}
+
+	if s.debugForwader != nil {
+		if err := s.debugForwader.init(); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -374,4 +381,9 @@ func (s *Executor) extendedShutdown(os.Signal) {
 		s.Log.Info("tracker shutdown")
 		s.Tracker.Tracker.Close()
 	}
+
+	if s.debugForwader != nil {
+		s.debugForwader.shutdown()
+	}
+
 }
