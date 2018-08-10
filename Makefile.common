@@ -14,20 +14,18 @@ ifeq ($(GOTEST_TIMEOUT),)
 	GOTEST_TIMEOUT=60s
 endif
 
-ifeq ($(GOMETALINTER_OPTS),)
-	GOMETALINTER_OPTS=--enable-all --tests
-endif
+# REVIVELINTER_EXCLUDES=$(shell git ls-files | grep '\(_easyjson\|_fsm\|\.pb\)\.go$')
 
-ifeq ($(GOMETALINTER_EXCLUDES),)
-	GOMETALINTER_EXCLUDES=\
-	  --disable lll \
-		--exclude "\.pb\.go:" \
-		--exclude "_fsm\.go:" \
-		--exclude "_easyjson\.go:" \
-		--exclude "_test\.go:.*\((lll|unparam|gocyclo)\)$$" \
-		--exclude "comment should be of the form.*\(golint\)$$" \
-		--exclude "should have comment or be unexported.*\(golint\)$$"
-endif
+# ifeq ($(GOMETALINTER_EXCLUDES),)
+# 	GOMETALINTER_EXCLUDES=\
+# 	  --disable lll \
+# 		--exclude "\.pb\.go:" \
+# 		--exclude "_fsm\.go:" \
+# 		--exclude "_easyjson\.go:" \
+# 		--exclude "_test\.go:.*\((lll|unparam|gocyclo)\)$$" \
+# 		--exclude "comment should be of the form.*\(golint\)$$" \
+# 		--exclude "should have comment or be unexported.*\(golint\)$$"
+# endif
 
 CODE_VERSION=$(TRAVIS_COMMIT)
 ifeq ($(CODE_VERSION),)
@@ -66,14 +64,7 @@ clean:
 	rm -f $(MAIN)
 
 lint: build
-	cd $(GOSRCDIR) && \
-		gometalinter \
-			--vendor --vendored-linters \
-			--deadline=$(GOTEST_TIMEOUT) \
-			$(GOMETALINTER_OPTS) \
-			$(GOMETALINTER_EXCLUDES) \
-			-D test -D testify \
-			$(GOPATHS)
+	revive -config revive.toml  -formatter friendly -exclude ./vendor/...  $(REVIVELINTER_EXCLUDES)  ./...
 
 test: lint
 	cd $(GOSRCDIR) && \
@@ -95,8 +86,7 @@ fmt:
 
 dep:
 	go get -u github.com/Masterminds/glide
-	go get -u github.com/alecthomas/gometalinter
-	gometalinter --install --update
+	go get -u github.com/remerge/revive
 	cd $(GOSRCDIR) && glide install
 
 init:
