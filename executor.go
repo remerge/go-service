@@ -32,9 +32,8 @@ type Executor struct {
 	Description string
 	Command     *cobra.Command
 
-	Log           *Logger
-	Rollbar       hosted.Rollbar
-	StatsDAddress string
+	Log     *Logger
+	Rollbar hosted.Rollbar
 
 	Tracker *tracker
 	Server  *server
@@ -181,13 +180,6 @@ func (s *Executor) buildCommand() *cobra.Command {
 		"rollbar-token",
 		s.Rollbar.Token,
 		"rollbar token",
-	)
-
-	flags.StringVar(
-		&s.StatsDAddress,
-		"statsd-address",
-		"127.0.0.1:8092",
-		"host:port for the statsd daemon",
 	)
 
 	// version command for deployment
