@@ -1,11 +1,8 @@
 package service
 
 import (
-	"fmt"
-	"net"
 	"runtime"
 	"runtime/pprof"
-	"strings"
 	"time"
 
 	"github.com/rcrowley/go-metrics"
@@ -251,119 +248,12 @@ func (s *Executor) flushMetrics(freq time.Duration) {
 	registerRuntimeMemStats(s.metricsRegistry)
 	go captureRuntimeMemStats(freq)
 
-	raddr, err := net.ResolveUDPAddr("udp", s.StatsDAddress)
-	s.Log.Panic(err, "failed to resolve")
-
-	laddr, err := net.ResolveUDPAddr("udp", "127.0.0.1:0")
-	s.Log.Panic(err, "failed to resolve")
-
-	conn, err := net.DialUDP("udp", laddr, raddr)
-	s.Log.Panic(err, "failed to connect to statsd")
-
-	defer func() {
-		_ = s.Log.Error(conn.Close(),
-			"failed to close statsd connection")
-	}()
-
-	writeCb := func(format string, a ...interface{}) {
-		msg := fmt.Sprintf(format, a...)
-		_, err := conn.Write([]byte(msg))
-		if err != nil {
-			s.Log.Warnf("failed to send metrics: %s", err.Error())
-		}
-	}
-
 	ticker := time.NewTicker(freq)
 	defer ticker.Stop()
 
 	for range ticker.C {
-		ts := (time.Now().UnixNano() / int64(freq)) * int64(freq)
-		s.metricsRegistry.Each(func(name string, i interface{}) {
-			s.flushMetric(name, i, ts, writeCb)
-		})
 		if flushErr := s.promMetrics.Update(); flushErr != nil {
 			s.Log.Warnf("failures while collect metrics: %v", flushErr)
 		}
-	}
-}
-
-// nolint: gocyclo
-func (s *Executor) flushMetric(
-	name string,
-	i interface{},
-	ts int64,
-	writeCb func(format string, a ...interface{}),
-) {
-	parts := strings.Split(name, " ")
-
-	var prefix string
-	if len(parts) > 1 {
-		prefix = parts[1] + "_"
-	}
-
-	parts = strings.SplitN(parts[0], ",", 2)
-	measurement := parts[0]
-	tags := fmt.Sprintf("service=%s", s.Name)
-
-	if len(parts) > 1 {
-		tags += "," + parts[1]
-	}
-
-	series := measurement + "," + tags
-
-	switch metric := i.(type) {
-	case metrics.Counter:
-		writeCb("%s %scount=%di %d\n", series, prefix, metric.Count(), ts)
-	case metrics.Gauge:
-		writeCb("%s %svalue=%di %d\n", series, prefix, metric.Value(), ts)
-	case metrics.GaugeFloat64:
-		writeCb("%s %svalue=%f %d\n", series, prefix, metric.Value(), ts)
-	case metrics.Healthcheck:
-		metric.Check()
-		writeCb("%s %serror=%s %d\n", series, prefix, metric.Error(), ts)
-	case metrics.Histogram:
-		sn := metric.Snapshot()
-		if sn.Count() == 0 {
-			break
-		}
-
-		ps := sn.Percentiles([]float64{0.5, 0.75, 0.95, 0.99, 0.999})
-		writeCb("%s %scount=%di %d\n", series, prefix, sn.Count(), ts)
-		writeCb("%s %smin=%di %d\n", series, prefix, sn.Min(), ts)
-		writeCb("%s %smax=%di %d\n", series, prefix, sn.Max(), ts)
-		writeCb("%s %smean=%f %d\n", series, prefix, sn.Mean(), ts)
-		writeCb("%s %sstddev=%f %d\n", series, prefix, sn.StdDev(), ts)
-		writeCb("%s %smedian=%f %d\n", series, prefix, ps[0], ts)
-		writeCb("%s %sp75=%f %d\n", series, prefix, ps[1], ts)
-		writeCb("%s %sp95=%f %d\n", series, prefix, ps[2], ts)
-		writeCb("%s %sp99=%f %d\n", series, prefix, ps[3], ts)
-		writeCb("%s %sp999=%f %d\n", series, prefix, ps[4], ts)
-	case metrics.Meter:
-		sn := metric.Snapshot()
-		writeCb("%s %scount=%di %d\n", series, prefix, sn.Count(), ts)
-		writeCb("%s %srate_m1=%f %d\n", series, prefix, sn.Rate1(), ts)
-		writeCb("%s %srate_m5=%f %d\n", series, prefix, sn.Rate5(), ts)
-		writeCb("%s %srate_m15=%f %d\n", series, prefix, sn.Rate15(), ts)
-		writeCb("%s %srate_mean=%f %d\n", series, prefix, sn.RateMean(), ts)
-	case metrics.Timer:
-		sn := metric.Snapshot()
-		if sn.Count() == 0 {
-			break
-		}
-		ps := sn.Percentiles([]float64{0.5, 0.75, 0.95, 0.99, 0.999})
-		writeCb("%s %scount=%di %d\n", series, prefix, sn.Count(), ts)
-		writeCb("%s %smin=%di %d\n", series, prefix, sn.Min(), ts)
-		writeCb("%s %smax=%di %d\n", series, prefix, sn.Max(), ts)
-		writeCb("%s %smean=%f %d\n", series, prefix, sn.Mean(), ts)
-		writeCb("%s %sstddev=%f %d\n", series, prefix, sn.StdDev(), ts)
-		writeCb("%s %smedian=%f %d\n", series, prefix, ps[0], ts)
-		writeCb("%s %sp75=%f %d\n", series, prefix, ps[1], ts)
-		writeCb("%s %sp95=%f %d\n", series, prefix, ps[2], ts)
-		writeCb("%s %sp99=%f %d\n", series, prefix, ps[3], ts)
-		writeCb("%s %sp999=%f %d\n", series, prefix, ps[4], ts)
-		writeCb("%s %srate_m1=%f %d\n", series, prefix, sn.Rate1(), ts)
-		writeCb("%s %srate_m5=%f %d\n", series, prefix, sn.Rate5(), ts)
-		writeCb("%s %srate_m15=%f %d\n", series, prefix, sn.Rate15(), ts)
-		writeCb("%s %srate_mean=%f %d\n", series, prefix, sn.RateMean(), ts)
 	}
 }
