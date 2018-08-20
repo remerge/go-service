@@ -17,7 +17,7 @@ func (e *Executor) WithDebugForwarder(port int) *Executor {
 	flags := e.Command.Flags()
 
 	flags.IntVar(
-		&e.Server.Port,
+		&e.debugForwader.Port,
 		"debug-fwd-port", e.debugForwader.Port,
 		"Debug forwarding port",
 	)
