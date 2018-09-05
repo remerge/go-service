@@ -1,10 +1,10 @@
 package service
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"runtime"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -12,7 +12,7 @@ import (
 	"github.com/rcrowley/go-metrics"
 	"github.com/remerge/cue"
 	"github.com/remerge/cue/hosted"
-	env "github.com/remerge/go-env"
+	"github.com/remerge/go-env"
 	"github.com/spf13/cobra"
 )
 
@@ -192,20 +192,19 @@ func (s *Executor) buildCommand() *cobra.Command {
 	})
 
 	cmd.PreRun = func(cmd *cobra.Command, args []string) {
-		var wg sync.WaitGroup
-		wg.Add(1)
+		errCh := make(chan error)
 		go func() {
-			defer wg.Done()
-			err := s.init()
-			s.readyC <- struct{}{}
-			if err != nil {
-				s.Log.Panic(err, "Error during service init")
-			}
+			errCh <- s.init()
 		}()
-		err := waitTimeout(&wg, time.Minute*5)
-		if err != nil {
-			s.Log.Panic(err, "Error during service init")
+		select {
+		case err := <-errCh:
+			if err != nil {
+				s.Log.Panic(err, "init failed")
+			}
+		case <-time.After(time.Minute*5):
+			s.Log.Panic(errors.New("init timeout reached"), "init timeout reached")
 		}
+		s.readyC <- struct{}{}
 	}
 	cmd.Run = func(cmd *cobra.Command, args []string) {
 		go func() {
@@ -220,21 +219,6 @@ func (s *Executor) buildCommand() *cobra.Command {
 	}
 
 	return cmd
-}
-
-// nolint: unparam
-func waitTimeout(wg *sync.WaitGroup, timeout time.Duration) error {
-	c := make(chan struct{})
-	go func() {
-		defer close(c)
-		wg.Wait()
-	}()
-	select {
-	case <-c:
-		return nil
-	case <-time.After(timeout):
-		return fmt.Errorf("Timeout after %v", timeout)
-	}
 }
 
 // Stop stops the executor and forces shutdown

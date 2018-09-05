@@ -45,7 +45,7 @@ type saramaLoggerWrapper struct {
 }
 
 func (slw *saramaLoggerWrapper) Print(v ...interface{}) {
-	slw.logger.Info(fmt.Sprint(v))
+	slw.logger.Info(fmt.Sprint(v...))
 }
 
 func (slw *saramaLoggerWrapper) Printf(format string, v ...interface{}) {
@@ -53,5 +53,5 @@ func (slw *saramaLoggerWrapper) Printf(format string, v ...interface{}) {
 }
 
 func (slw *saramaLoggerWrapper) Println(v ...interface{}) {
-	slw.logger.Info(fmt.Sprintln(v))
+	slw.logger.Info(fmt.Sprintln(v...))
 }
