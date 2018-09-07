@@ -125,6 +125,7 @@ func (s *Executor) init() error {
 		if err != nil {
 			// unclean shutdown
 			s.Log.Warn("found unclean service shutdown")
+			metrics.GetOrRegisterCounter("go_service_unclean_shutdown", s.metricsRegistry).Inc(1)
 		}
 	}
 
