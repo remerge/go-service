@@ -47,6 +47,41 @@ type Executor struct {
 	Debug      struct {
 		Active bool
 	}
+
+	services []Service
+}
+
+type WithLog struct {
+	Log cue.Logger
+}
+
+func (s *WithLog) SetLog(log cue.Logger) {
+	s.Log = log
+}
+
+type Serviceable interface {
+	Service
+	ConfigureFlags(*cobra.Command)
+	SetLog(cue.Logger)
+}
+
+// BaseService is a noop implementation of the Service interface that does nothing.
+// It can be used if you don't need to implement all of the interfaces methods.
+type BaseServiceable struct{}
+
+func (*BaseServiceable) Init() error                   { return nil }
+func (*BaseServiceable) Run() error                    { return nil }
+func (*BaseServiceable) Shutdown(sig os.Signal)        {}
+func (*BaseServiceable) ConfigureFlags(*cobra.Command) {}
+func (*BaseServiceable) SetLog(cue.Logger)             {}
+
+func (e *Executor) With(serviceables ...Serviceable) *Executor {
+	for _, s := range serviceables {
+		s.SetLog(e.Log.Logger)
+		s.ConfigureFlags(e.Command)
+		e.services = append(e.services, s)
+	}
+	return e
 }
 
 // NewExecutor creates new basic executor
@@ -61,6 +96,7 @@ func NewExecutor(name string, service Service) *Executor {
 	s.stopC = make(chan struct{})
 	s.doneC = make(chan struct{})
 	s.metricsRegistry = metrics.DefaultRegistry
+
 	return s
 }
 
@@ -80,6 +116,13 @@ func (s *Executor) run() error {
 	if err != nil {
 		return err
 	}
+
+	for _, service := range s.services {
+		if err := service.Run(); err != nil {
+			return err
+		}
+	}
+
 	return s.service.Run()
 }
 
@@ -138,6 +181,13 @@ func (s *Executor) init() error {
 	if err != nil {
 		return err
 	}
+
+	for _, service := range s.services {
+		if err := service.Init(); err != nil {
+			return err
+		}
+	}
+
 	return s.service.Init()
 }
 
@@ -251,6 +301,12 @@ func (s *Executor) Stop() {
 func (s *Executor) shutdown(sig os.Signal) {
 	s.service.Shutdown(sig)
 	s.extendedShutdown(sig)
+
+	// shutdown contained services
+	for _, service := range s.services {
+		service.Shutdown(sig)
+	}
+
 	close(s.readyC)
 	if atomic.CompareAndSwapInt32(&s.doneClosed, 0, 1) {
 		close(s.doneC)
