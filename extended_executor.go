@@ -143,6 +143,25 @@ func (s *Executor) initExtended() error {
 		s.Tracker.EventMetadata.Environment = env.Env
 		s.Tracker.EventMetadata.Host = GetFQDN()
 		s.Tracker.EventMetadata.Release = CodeVersion
+
+		if s.Tracker.Tracker == nil {
+			s.Log.WithFields(cue.Fields{
+				"env":     s.Tracker.EventMetadata.Environment,
+				"cluster": s.Tracker.EventMetadata.Cluster,
+				"host":    s.Tracker.EventMetadata.Host,
+				"release": CodeVersion,
+				"build":   CodeBuild,
+			}).Infof("starting %s", s.Tracker.EventMetadata.Service)
+
+			var err error
+			s.Tracker.Tracker, err = gotracker.NewKafkaTracker(
+				strings.Split(s.Tracker.Connect, ","),
+				&s.Tracker.EventMetadata,
+			)
+			if err != nil {
+				return fmt.Errorf("failed to start tracker. %v", err)
+			}
+		}
 	}
 
 	if s.Server != nil {
@@ -165,25 +184,6 @@ func (s *Executor) initExtended() error {
 }
 
 func (s *Executor) runExtended() error {
-	if s.Tracker != nil {
-		s.Log.WithFields(cue.Fields{
-			"env":     s.Tracker.EventMetadata.Environment,
-			"cluster": s.Tracker.EventMetadata.Cluster,
-			"host":    s.Tracker.EventMetadata.Host,
-			"release": CodeVersion,
-			"build":   CodeBuild,
-		}).Infof("starting %s", s.Tracker.EventMetadata.Service)
-
-		var err error
-		s.Tracker.Tracker, err = gotracker.NewKafkaTracker(
-			strings.Split(s.Tracker.Connect, ","),
-			&s.Tracker.EventMetadata,
-		)
-		if err != nil {
-			return fmt.Errorf("failed to start tracker. %v", err)
-		}
-	}
-
 	if s.Server != nil {
 		// start debug server
 		if s.Server.Debug.Port < 1 && s.Server.Port > 0 {
