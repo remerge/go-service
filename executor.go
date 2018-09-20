@@ -202,7 +202,7 @@ func (s *Executor) buildCommand() *cobra.Command {
 			if err != nil {
 				s.Log.Panic(err, "init failed")
 			}
-		case <-time.After(time.Minute*5):
+		case <-time.After(time.Minute * 5):
 			s.Log.Panic(errors.New("init timeout reached"), "init timeout reached")
 		}
 		s.readyC <- struct{}{}
