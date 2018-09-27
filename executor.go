@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 	"os"
+	"reflect"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -13,14 +14,25 @@ import (
 	"github.com/remerge/cue"
 	"github.com/remerge/cue/hosted"
 	env "github.com/remerge/go-env"
+	"github.com/remerge/go-service/registry"
 	"github.com/spf13/cobra"
 )
+
+// CodeVersion will be set to the package version or git ref of consumers of
+// go-service by their build system.
+var CodeVersion = "unknown"
+
+// CodeBuild will be set to the build number and generator of consumers of
+// go-service by their build system.
+var CodeBuild = "unknown"
 
 // Executor is the base for implementing custom services based on go-service. It
 // should be extended with custom command line options and state required for
 // the service to function.
 type Executor struct {
 	service Service
+
+	*registry.ServiceRegistry
 
 	// Sends nil when inited worked correctly, or error otherwize
 	// You can use it to be notified the end of init
@@ -35,10 +47,9 @@ type Executor struct {
 	Log     *Logger
 	Rollbar hosted.Rollbar
 
-	Tracker *tracker
-	Server  *server
-
-	*debugForwader
+	Tracker       *tracker
+	Server        *server
+	debugForwader *debugForwader
 
 	metricsRegistry metrics.Registry
 	promMetrics     *PrometheusMetrics
@@ -51,53 +62,42 @@ type Executor struct {
 	services []Service
 }
 
-type WithLog struct {
-	Log cue.Logger
-}
-
-func (s *WithLog) SetLog(log cue.Logger) {
-	s.Log = log
-}
-
-type Serviceable interface {
-	Service
-	ConfigureFlags(*cobra.Command)
-	SetLog(cue.Logger)
-}
-
-// BaseService is a noop implementation of the Service interface that does nothing.
-// It can be used if you don't need to implement all of the interfaces methods.
-type BaseServiceable struct{}
-
-func (*BaseServiceable) Init() error                   { return nil }
-func (*BaseServiceable) Run() error                    { return nil }
-func (*BaseServiceable) Shutdown(sig os.Signal)        {}
-func (*BaseServiceable) ConfigureFlags(*cobra.Command) {}
-func (*BaseServiceable) SetLog(cue.Logger)             {}
-
-func (e *Executor) With(serviceables ...Serviceable) *Executor {
-	for _, s := range serviceables {
-		s.SetLog(e.Log.Logger)
-		s.ConfigureFlags(e.Command)
-		e.services = append(e.services, s)
-	}
-	return e
-}
-
 // NewExecutor creates new basic executor
 func NewExecutor(name string, service Service) *Executor {
-	s := &Executor{}
-	s.service = service
-	s.Name = name
-	s.Log = NewLogger(name)
-	s.Command = s.buildCommand()
+	e := &Executor{
+		service:         service,
+		Name:            name,
+		Log:             NewLogger(name),
+		readyC:          make(chan struct{}, 1),
+		stopC:           make(chan struct{}),
+		doneC:           make(chan struct{}),
+		metricsRegistry: metrics.DefaultRegistry,
+		ServiceRegistry: registry.New(),
+	}
 
-	s.readyC = make(chan struct{}, 1)
-	s.stopC = make(chan struct{})
-	s.doneC = make(chan struct{})
-	s.metricsRegistry = metrics.DefaultRegistry
+	e.Command = e.buildCommand()
 
-	return s
+	e.Register(func() (*cobra.Command, error) {
+		return e.Command, nil
+	})
+
+	e.Register(func() (cue.Logger, error) {
+		return e.Log, nil
+	})
+
+	e.Register(func() (metrics.Registry, error) {
+		return e.metricsRegistry, nil
+	})
+
+	e.Register(func() (*PrometheusMetrics, error) {
+		return e.promMetrics, nil
+	})
+
+	registerDebugForwarder(e.ServiceRegistry)
+	registerTracker(e.ServiceRegistry, name)
+	registerServer(e.ServiceRegistry, name)
+
+	return e
 }
 
 // StopChan gets the stop channel which will block until
@@ -112,11 +112,6 @@ func (s *Executor) WaitForShutdown() {
 }
 
 func (s *Executor) run() error {
-	err := s.runExtended()
-	if err != nil {
-		return err
-	}
-
 	for _, service := range s.services {
 		if err := service.Run(); err != nil {
 			return err
@@ -155,6 +150,11 @@ func (s *Executor) init() error {
 		go s.flushMetrics(10 * time.Second)
 	}
 
+	// TODO: pass these around properly and don't set them directly
+	if s.Server != nil {
+		s.Server.promMetrics = s.promMetrics
+	}
+
 	// create cache folder if missing #nosec
 	err := os.MkdirAll("cache", 0755)
 	if err != nil {
@@ -176,10 +176,6 @@ func (s *Executor) init() error {
 	_, err = os.Create("cache/.started")
 	if err != nil {
 		return fmt.Errorf("failed to create cache/.started. %v", err)
-	}
-	err = s.initExtended()
-	if err != nil {
-		return err
 	}
 
 	for _, service := range s.services {
@@ -300,7 +296,6 @@ func (s *Executor) Stop() {
 // and flushes all log and error buffers.
 func (s *Executor) shutdown(sig os.Signal) {
 	s.service.Shutdown(sig)
-	s.extendedShutdown(sig)
 
 	// shutdown contained services
 	for _, service := range s.services {
@@ -326,4 +321,24 @@ func (s *Executor) shutdown(sig os.Signal) {
 	_ = cue.Close(5 * time.Second)
 	s.Log.Info("shutdown done")
 	close(s.stopC)
+}
+
+func (e *Executor) RequestServices(services ...interface{}) {
+	for _, s := range services {
+		err := e.ServiceRegistry.Request(s)
+		if err != nil {
+			panic(err)
+		}
+		// s is a pointer to a pointer to a type instance implementing a Service
+		// TODO: how to cast this without reflections? Am I stupid?
+		sv := reflect.ValueOf(s).Elem().Interface().(Service)
+		e.services = append(e.services, sv)
+	}
+}
+
+// WithMetricsRegistry replaces default metrics registry.
+// This method should be called ONCE BEFORE adding other services to the executor with WithXYZ or direct service registry request
+func (e *Executor) WithMetricsRegistry(r metrics.Registry) *Executor {
+	e.metricsRegistry = r
+	return e
 }

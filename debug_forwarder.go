@@ -3,25 +3,44 @@ package service
 import (
 	"fmt"
 	"net"
+	"os"
 	"sync"
 	"sync/atomic"
 
+	"github.com/spf13/cobra"
+
 	"github.com/remerge/cue"
+	"github.com/remerge/go-service/registry"
 )
 
-func (e *Executor) WithDebugForwarder(port int) *Executor {
-	e.debugForwader = &debugForwader{
-		Port: port,
-		log:  e.Log,
-	}
-	flags := e.Command.Flags()
+type DebugForwaderConfig struct {
+	Port int
+}
 
-	flags.IntVar(
-		&e.debugForwader.Port,
-		"debug-fwd-port", e.debugForwader.Port,
+type DebugForwaderParams struct {
+	registry.Params
+	DebugForwaderConfig `registry:"lazy"`
+	Log                 cue.Logger
+	Cmd                 *cobra.Command
+}
+
+func registerDebugForwarder(r *registry.ServiceRegistry) {
+	r.Register(func(params *DebugForwaderParams) (*debugForwader, error) {
+		f := &debugForwader{
+			Port: params.Port,
+			log:  params.Log,
+		}
+		f.configureFlags(params.Cmd)
+		return f, nil
+	})
+}
+
+func (f *debugForwader) configureFlags(cmd *cobra.Command) {
+	cmd.Flags().IntVar(
+		&f.Port,
+		"debug-fwd-port", f.Port,
 		"Debug forwarding port",
 	)
-	return e
 }
 
 func (e *Executor) ForwardToDebugConns(data []byte) {
@@ -32,17 +51,25 @@ func (e *Executor) HasOpenDebugForwardingConns() bool {
 	return e.debugForwader.hasOpenConnections()
 }
 
+func (e *Executor) WithDebugForwarder(port int) *Executor {
+	err := e.ServiceRegistry.Request(&e.debugForwader, DebugForwaderConfig{Port: port})
+	if err != nil {
+		panic(err)
+	}
+	e.services = append(e.services, e.debugForwader)
+	return e
+}
+
 type debugForwader struct {
 	sync.Mutex
 	Port      int
 	conns     sync.Map
 	connCount uint32
 	connLn    net.Listener
-	log       *Logger
+	log       cue.Logger
 }
 
-// initDebugForwardingListener
-func (f *debugForwader) init() error {
+func (f *debugForwader) Init() error {
 	if f.Port == 0 {
 		return nil
 	}
@@ -67,7 +94,11 @@ func (f *debugForwader) init() error {
 	return nil
 }
 
-func (f *debugForwader) shutdown() {
+func (f *debugForwader) Run() error {
+	return nil
+}
+
+func (f *debugForwader) Shutdown(os.Signal) {
 	if f == nil {
 		return
 	}

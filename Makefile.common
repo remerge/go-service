@@ -119,3 +119,7 @@ release:
 deploy:
 	/bin/bash -c 'cd ../chef.new && knife ssh roles:$(PROJECT) sudo chef-client'
 	/bin/bash -c 'cd ../chef && knife sudo -Q roles:$(PROJECT) chef-client'
+
+watch:
+	go get github.com/cespare/reflex
+	reflex -r '\.go$$' -s -- sh -c 'clear && go test -v -run=Test$(T)'
