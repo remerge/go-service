@@ -1,31 +1,12 @@
-# http://stackoverflow.com/questions/322936/common-gnu-makefile-directory-path#comment11704496_324782
-TOP := $(dir $(CURDIR)/$(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST)))
-
+GO=GO111MODULE=on go
 GOFMT=gofmt -w -s
-
-GOSRCDIR=$(GOPATH)/src/$(PACKAGE)
-GOPATHS=$(shell glide novendor | grep -v /main/)
 GOFILES=$(shell git ls-files | grep '\.go$$')
 
-MAINGO=$(wildcard main/*.go)
-MAIN=$(patsubst main/%.go,%,$(MAINGO))
+MAIN=./cmd/$(PROJECT)
 
 ifeq ($(GOTEST_TIMEOUT),)
 	GOTEST_TIMEOUT=60s
 endif
-
-# REVIVELINTER_EXCLUDES=$(shell git ls-files | grep '\(_easyjson\|_fsm\|\.pb\)\.go$')
-
-# ifeq ($(GOMETALINTER_EXCLUDES),)
-# 	GOMETALINTER_EXCLUDES=\
-# 	  --disable lll \
-# 		--exclude "\.pb\.go:" \
-# 		--exclude "_fsm\.go:" \
-# 		--exclude "_easyjson\.go:" \
-# 		--exclude "_test\.go:.*\((lll|unparam|gocyclo)\)$$" \
-# 		--exclude "comment should be of the form.*\(golint\)$$" \
-# 		--exclude "should have comment or be unexported.*\(golint\)$$"
-# endif
 
 CODE_VERSION=$(TRAVIS_COMMIT)
 ifeq ($(CODE_VERSION),)
@@ -37,89 +18,64 @@ ifeq ($(CODE_BUILD),\#)
 	CODE_BUILD=$(PACKAGE)\#$(shell whoami)
 endif
 
-LDIMPORT=$(PACKAGE)/vendor/github.com/remerge/go-service
+LDIMPORT=github.com/remerge/go-service
 LDFLAGS=-X $(LDIMPORT).CodeVersion=$(CODE_VERSION) -X $(LDIMPORT).CodeBuild=$(CODE_BUILD)@$(shell date -u +%FT%TZ)
 
-.PHONY: build run clean lint test bench fmt dep init up gen proto-dep proto release deploy
+.PHONY: build build-dist run run-bin clean lint test bench fmt dep up gen proto-dep proto release deploy
 
 all: build
 
 build: fmt
-	cd $(GOSRCDIR) && \
-		CGO_ENABLED=0 \
-		go test -v -i
-	cd $(GOSRCDIR) && \
-		CGO_ENABLED=0 \
-		go build -v -i -ldflags "$(LDFLAGS)" $(GOPATHS)
-	cd $(GOSRCDIR) && \
-		CGO_ENABLED=0 \
-		go build -v -i -ldflags "$(LDFLAGS)" $(MAINGO)
+	CGO_ENABLED=0 $(GO) test -v -i
+	CGO_ENABLED=0 $(GO) build -v -i -ldflags "$(LDFLAGS)" -o $(PROJECT) $(MAIN)
 
-run: build
-	./$(MAIN)
+build-dist: fmt
+	CGO_ENABLED=0 \
+	GOOS=linux GOARCH=amd64 \
+	$(GO) build -v -i -ldflags "$(LDFLAGS)" -o $(PROJECT).x86_64 $(MAIN)
+	CGO_ENABLED=0 \
+	GOOS=linux GOARCH=arm64 \
+	$(GO) build -v -i -ldflags "$(LDFLAGS)" -o $(PROJECT).aarch64 $(MAIN)
+
+run:
+	$(GO) run $(MAIN)
+
+run-bin: build
+	./$(PROJECT)
 
 clean:
-	cd $(GOSRCDIR) && \
-		go clean -i -x
-	rm -f $(MAIN)
+	$(GO) clean -i -x
+	rm -f $(PROJECT)
 
 lint: build
-	revive -config revive.toml  -formatter friendly -exclude ./vendor/...  $(REVIVELINTER_EXCLUDES)  ./...
-
+	revive -config revive.toml  -formatter friendly $(REVIVELINTER_EXCLUDES)  ./...
+		
 test: lint
-	cd $(GOSRCDIR) && \
-		go test -timeout $(GOTEST_TIMEOUT) -v $(GOPATHS)
+	$(GO) test -timeout $(GOTEST_TIMEOUT) -v ./...
 
 bench: build
-	cd $(GOSRCDIR) && \
-		go test -bench=. -benchmem -cpu 32 $(GOPATHS)
+	$(GO) test -bench=. -benchmem -cpu 32 ./...
 
-escape: build
-	for pkg in $(GOPATHS); do \
-		cd $(GOSRCDIR) && \
-			CGO_ENABLED=0 \
-			go build -v -gcflags '-m -m -l -e' -ldflags "$(LDFLAGS)" $$pkg; \
-	done
-
+# builds with escape analysis active
+build-escape:
+	CGO_ENABLED=0 $(GO) build -v -gcflags '-m -m -l -e' -ldflags "$(LDFLAGS)" ./...
+	
 fmt:
 	$(GOFMT) $(GOFILES)
 
 dep:
-	go get -u github.com/Masterminds/glide
 	go get -u github.com/remerge/revive
-	cd $(GOSRCDIR) && glide install
-
-init:
-	cd $(GOSRCDIR) && \
-		glide init
 
 up:
-	cd $(GOSRCDIR) && \
-		glide update
+	go get -u
 
 gen:
-	cd $(GOSRCDIR) && \
-		go generate $(GOPATHS)
+	$(GO) generate ./...
 	$(GOFMT) $(GOFILES)
 
-PROTOS=$(wildcard *.proto */*.proto)
-PBGOS=$(patsubst %.proto,%.pb.go,$(PROTOS))
-
-proto-dep:
-	go get -u github.com/gogo/protobuf/protoc-gen-gogofaster
-
-proto: proto-dep $(PBGOS)
-
-$(PBGOS): %.pb.go: %.proto
-	protoc --gogofaster_out=. -I=.:$(TOP)/vendor:$(GOPATH)/src $<
-
 release:
-	git push origin master master:production
+	git push origin master:production
 
 deploy:
 	/bin/bash -c 'cd ../chef.new && knife ssh roles:$(PROJECT) sudo chef-client'
 	/bin/bash -c 'cd ../chef && knife sudo -Q roles:$(PROJECT) chef-client'
-
-watch:
-	go get github.com/cespare/reflex
-	reflex -r '\.go$$' -s -- sh -c 'clear && go test -v -run=Test$(T)'

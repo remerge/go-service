@@ -2,3 +2,4 @@ vendor
 service
 cache
 main/main
+go.sum
