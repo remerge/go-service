@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -84,6 +85,10 @@ func (s *Executor) run() error {
 }
 
 func (s *Executor) init() error {
+	if strings.Contains(s.Name, " ") {
+		return fmt.Errorf("Name %v should not contain spaces", s.Name)
+	}
+
 	env.Set(env.Env)
 	setLogFormat(s.Debug.Active)
 

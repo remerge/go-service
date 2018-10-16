@@ -64,3 +64,9 @@ func TestExecutionWithReadyChannel(t *testing.T) {
 	require.False(t, subject.runCalled)
 	require.False(t, subject.shutdownCalled)
 }
+
+func TestServiceNameWithSpace(t *testing.T) {
+	subject := newTestService(nil)
+	subject.Name = "name with space"
+	require.Panics(t, subject.Execute)
+}
