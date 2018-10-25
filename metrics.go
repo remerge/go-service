@@ -56,9 +56,16 @@ var (
 
 // CaptureRuntimeMemStats captures new values for the Go runtime statistics
 // exported in runtime.MemStats.  This is designed to be called as a goroutine.
-func captureRuntimeMemStats(d time.Duration) {
-	for range time.Tick(d) {
-		captureRuntimeMemStatsOnce()
+func captureRuntimeMemStats(d time.Duration, closeChan <-chan struct{}) {
+	ticker := time.NewTicker(d)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-closeChan:
+			return
+		case <-ticker.C:
+			captureRuntimeMemStatsOnce()
+		}
 	}
 }
 
@@ -246,14 +253,23 @@ func registerRuntimeMemStats(r metrics.Registry) {
 // nolint: unparam
 func (s *Executor) flushMetrics(freq time.Duration) {
 	registerRuntimeMemStats(s.metricsRegistry)
-	go captureRuntimeMemStats(freq)
+
+	// version gauge
+	metrics.GetOrRegisterGauge("service,version="+CodeVersion+" version", s.metricsRegistry).Update(1)
+
+	go captureRuntimeMemStats(freq, s.stopC)
 
 	ticker := time.NewTicker(freq)
 	defer ticker.Stop()
 
-	for range ticker.C {
-		if flushErr := s.promMetrics.Update(); flushErr != nil {
-			s.Log.Warnf("failures while collect metrics: %v", flushErr)
+	for {
+		select {
+		case <-s.stopC:
+			return
+		case <-ticker.C:
+			if flushErr := s.promMetrics.Update(); flushErr != nil {
+				s.Log.Warnf("failures while collect metrics: %v", flushErr)
+			}
 		}
 	}
 }
