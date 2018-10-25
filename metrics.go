@@ -45,6 +45,7 @@ var (
 		NumGoroutine metrics.Gauge
 		NumThread    metrics.Gauge
 		ReadMemStats metrics.Timer
+		Uptime       metrics.Gauge
 	}
 	frees   uint64
 	lookups uint64
@@ -59,12 +60,13 @@ var (
 func captureRuntimeMemStats(d time.Duration, closeChan <-chan struct{}) {
 	ticker := time.NewTicker(d)
 	defer ticker.Stop()
+	startTime := time.Now()
 	for {
 		select {
 		case <-closeChan:
 			return
 		case <-ticker.C:
-			captureRuntimeMemStatsOnce()
+			captureRuntimeMemStatsOnce(startTime)
 		}
 	}
 }
@@ -77,10 +79,11 @@ func captureRuntimeMemStats(d time.Duration, closeChan <-chan struct{}) {
 // Be very careful with this because runtime.ReadMemStats calls the C functions
 // runtime·semacquire(&runtime·worldsema) and runtime·stoptheworld() and that
 // last one does what it says on the tin.
-func captureRuntimeMemStatsOnce() {
+func captureRuntimeMemStatsOnce(startTime time.Time) {
 	t := time.Now()
 	runtime.ReadMemStats(&memStats) // This takes 50-200us.
 	runtimeMetrics.ReadMemStats.UpdateSince(t)
+	runtimeMetrics.Uptime.Update(int64(time.Since(startTime)))
 
 	runtimeMetrics.MemStats.Alloc.Update(int64(memStats.Alloc))
 	runtimeMetrics.MemStats.BuckHashSys.Update(int64(memStats.BuckHashSys))
@@ -185,6 +188,7 @@ func registerRuntimeMemStats(r metrics.Registry) {
 	runtimeMetrics.NumGoroutine = metrics.NewGauge()
 	runtimeMetrics.NumThread = metrics.NewGauge()
 	runtimeMetrics.ReadMemStats = lft.NewLockFreeTimer()
+	runtimeMetrics.Uptime = metrics.GetOrRegisterGauge("go_service,version="+CodeVersion+" uptime", r)
 
 	_ = r.Register("go_runtime mem_stat_alloc",
 		runtimeMetrics.MemStats.Alloc)
@@ -253,10 +257,6 @@ func registerRuntimeMemStats(r metrics.Registry) {
 // nolint: unparam
 func (s *Executor) flushMetrics(freq time.Duration) {
 	registerRuntimeMemStats(s.metricsRegistry)
-
-	// version gauge
-	metrics.GetOrRegisterGauge("service,version="+CodeVersion+" version", s.metricsRegistry).Update(1)
-
 	go captureRuntimeMemStats(freq, s.stopC)
 
 	ticker := time.NewTicker(freq)
