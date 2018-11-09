@@ -24,7 +24,7 @@ type DebugForwaderParams struct {
 	Cmd                 *cobra.Command
 }
 
-func registerDebugForwarder(r *registry.ServiceRegistry) {
+func registerDebugForwarder(r Registry) {
 	r.Register(func(params *DebugForwaderParams) (*debugForwader, error) {
 		f := &debugForwader{
 			Port: params.Port,

@@ -47,9 +47,10 @@ type Executor struct {
 	Log     *Logger
 	Rollbar hosted.Rollbar
 
-	Tracker       *tracker
-	Server        *server
-	debugForwader *debugForwader
+	Tracker *tracker
+	Server  *server
+
+	*debugForwader
 
 	metricsRegistry metrics.Registry
 	promMetrics     *PrometheusMetrics
@@ -298,8 +299,8 @@ func (s *Executor) shutdown(sig os.Signal) {
 	s.service.Shutdown(sig)
 
 	// shutdown contained services
-	for _, service := range s.services {
-		service.Shutdown(sig)
+	for i := len(s.services); i >= 0; i-- {
+		s.services[i].Shutdown(sig)
 	}
 
 	close(s.readyC)
