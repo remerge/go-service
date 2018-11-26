@@ -7,11 +7,11 @@ import (
 
 	env "github.com/remerge/go-env"
 	gotracker "github.com/remerge/go-tracker"
+	 "github.com/remerge/go-tools/fqdn"
 
 	"github.com/spf13/cobra"
 
 	"github.com/remerge/cue"
-	"github.com/remerge/go-service/registry"
 )
 
 type tracker struct {
@@ -22,7 +22,7 @@ type tracker struct {
 	log           cue.Logger
 }
 
-func registerTracker(r *registry.ServiceRegistry, name string) {
+func registerTracker(r Registry, name string) {
 	r.Register(func(log cue.Logger, cmd *cobra.Command) (*tracker, error) {
 		t := &tracker{
 			log:  log,
@@ -47,26 +47,12 @@ func (t *tracker) configureFlags(cmd *cobra.Command) {
 	)
 }
 
-// WithTracker adds tracker to ExtendedExecutor.
-// This method should be called ONCE BEFORE Execute() method.
-func (e *Executor) WithTracker() *Executor {
-	err := e.ServiceRegistry.Request(&e.Tracker)
-	if err != nil {
-		panic(err)
-	}
-	e.services = append(e.services, e.Tracker)
-	return e
-}
-
 func (t *tracker) Init() error {
 	t.EventMetadata.Service = t.Name
 	t.EventMetadata.Environment = env.Env
-	t.EventMetadata.Host = GetFQDN()
+	t.EventMetadata.Host = fqdn.Get()
 	t.EventMetadata.Release = CodeVersion
-	return nil
-}
 
-func (t *tracker) Run() error {
 	t.log.WithFields(cue.Fields{
 		"env":     t.EventMetadata.Environment,
 		"cluster": t.EventMetadata.Cluster,

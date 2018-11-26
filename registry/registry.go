@@ -8,18 +8,22 @@ import (
 	"github.com/remerge/cue"
 )
 
-type ServiceRegistry struct {
+// Registry is used to register service  constructors and instantiate the services.
+// It provides a tools for dependency inject based service composition.
+type Registry struct {
 	providers map[reflect.Type]*provider
 	log       cue.Logger
 }
 
-func New() *ServiceRegistry {
-	return &ServiceRegistry{
+// New create a new Registry
+func New() *Registry {
+	return &Registry{
 		providers: make(map[reflect.Type]*provider),
 		log:       cue.NewLogger("registry"),
 	}
 }
 
+// Params is used to mark structs as ctor parameter holder
 type Params struct{}
 
 var paramsType = reflect.TypeOf(Params{})
@@ -33,29 +37,31 @@ type provider struct {
 	instance                *reflect.Value
 }
 
-// Register registers a services constructor function with the registry. The constructor function can
+// Register registers a component constructor function with the registry. The constructor function can
 // have zero or more parameters. If it has parameters these are treated as requirement for the ctor. The ctor functions
-// return signature is used to infer which type is created by the ctor. The second return value is the error if any.
+// return signature is used to infer which type is created by the ctor. The second return value is the error.
 // Parameters to the ctor are resolve by the registry. If a parameters type was not registered with the registry before
-// the instantiation will fail.
-func (sr *ServiceRegistry) Register(ctor interface{}) error {
+// the instantiation will fail. There are two exceptions to this rule:
+// 1) if the function signature has a single parameter with a struct type that embeds the Params struct. In this case the structs members
+//    are used as requirements for the ctor. This helps with ctor that require a large number of dependencies
+// 2) If there is an exact sub signature match with parameters passed to Request
+func (r *Registry) Register(ctor interface{}) (func(...interface{}) (interface{}, error), error) {
 	t := reflect.TypeOf(ctor)
 
 	if t.Kind() != reflect.Func {
-		return fmt.Errorf("Register expects only functions as parameter, a %v was passed", t.Kind())
+		return nil, fmt.Errorf("Register expects only functions as parameter, a %v was passed", t.Kind())
 	}
 
 	if t.NumOut() != 2 {
-		return fmt.Errorf("Register expects a function that return two values not %d", t.NumOut())
+		return nil, fmt.Errorf("Register expects a function that return two values not %d", t.NumOut())
 	}
 
 	provided := t.Out(0)
 
-	if _, found := sr.providers[provided]; found {
-		return fmt.Errorf("A provider for %v was already registered before", provided)
+	if _, found := r.providers[provided]; found {
+		return nil, fmt.Errorf("A provider for %v was already registered before", provided)
 	}
 
-	// TODO: check types of return values
 	p := &provider{
 		provides: provided,
 		ctor:     reflect.ValueOf(ctor),
@@ -83,15 +89,27 @@ func (sr *ServiceRegistry) Register(ctor interface{}) error {
 			p.requires = append(p.requires, t.In(i))
 		}
 	}
-	sr.log.Debugf("registered provider for %v, requires %v", p.provides, p.requires)
-	sr.providers[p.provides] = p
-	return nil
+	r.log.Debugf("registered provider for %v, requires=%v requiresOnInstantiation=%v", p.provides, p.requires, p.requiresOnInstantiation)
+	r.providers[p.provides] = p
+	resolvedCtor := &ResolvedCtor{p, r}
+	return resolvedCtor.Call, nil
 }
 
-// Request resolves a dependency tree of a given target and set up all objects on the way.
-// target needs to be a pointer to a pointer to the struct that should be initialized.
+// Request resolves a dependency tree for a given target type and sets up all objects on the way and creates an instance of targetType
+// targetType is the type of the requested object
 // params can be used to pass additional parameter structs.
-func (sr *ServiceRegistry) Request(target interface{}, params ...interface{}) error {
+func (r *Registry) Request(targetType reflect.Type, params ...interface{}) (interface{}, error) {
+	provider, err := r.providerFor(targetType)
+	if err != nil {
+		return nil, err
+	}
+	return r.interfaceFor(provider, params)
+}
+
+// RequestAndSet resolves a dependency tree of a given target and sets up all objects on the way.
+// target needs to be a pointer to a pointer to the struct that should be initialized.
+// params can be used to pass additional parameter structs
+func (r *Registry) RequestAndSet(target interface{}, params ...interface{}) error {
 	// must be a pointer to a pointer
 	pt := reflect.TypeOf(target)
 
@@ -103,83 +121,125 @@ func (sr *ServiceRegistry) Request(target interface{}, params ...interface{}) er
 	t := reflect.ValueOf(target).Elem().Type()
 
 	// needs to be a pointer OR an interface
-	// TODO: interface
-	if t.Kind() != reflect.Ptr {
+	if t.Kind() != reflect.Ptr && t.Kind() != reflect.Interface {
 		return fmt.Errorf("Dereferenced target needs to be a pointer but is %v", t)
 	}
 
-	provider, err := sr.providerFor(t)
+	v, err := r.Request(t, params...)
 	if err != nil {
 		return err
 	}
-
-	// do we have an instance already?
-	if provider.instance == nil {
-		if err := sr.resolve(provider, params); err != nil {
-			return err
-		}
-	}
-
-	// TODO: maybe make this more functional and not set the target but let the caller to that?
-	v := reflect.ValueOf(target).Elem()
-	v.Set(*provider.instance)
+	holder := reflect.ValueOf(target).Elem()
+	holder.Set(reflect.ValueOf(v))
 	return nil
 }
 
-func (sr *ServiceRegistry) providerFor(t reflect.Type) (*provider, error) {
-	sr.log.Debugf("requesting provider for %v", t)
-	provider, found := sr.providers[t]
+func (r *Registry) interfaceFor(p *provider, params []interface{}) (interface{}, error) {
+	if p.instance == nil {
+		if err := r.resolve(p, params); err != nil {
+			r.log.Debugf("could not resolve %v params=%v err=%v", p.ctor.Type(), params, err)
+			return nil, err
+		}
+	}
+	return p.instance.Interface(), nil
+}
+
+func (r *Registry) providerFor(t reflect.Type) (*provider, error) {
+	r.log.Debugf("requesting provider for %v", t)
+	provider, found := r.providers[t]
 	if !found {
 		return nil, fmt.Errorf("no provider for %v", t)
 	}
 	return provider, nil
 }
 
-func (sr *ServiceRegistry) resolve(p *provider, extraParams []interface{}) error {
-	sr.log.Debugf("resolving %v, requires=%v", p.provides, p.requires)
+// resolve is recursive - it doesn't build a proper graph at the moment however this
+// should be sufficient  for our usecases for now
+func (r *Registry) resolve(p *provider, extraParams []interface{}) error {
+	r.log.Debugf("resolving %v, requires=%v extraParams=%v", p.provides, p.requires, extraParams)
 
 	if p.instance != nil {
+		r.log.Debugf("returning previously created instance=%v", p.instance)
 		return nil
 	}
 
-	if len(p.requires) == 0 {
-		return sr.instantiate(p)
+	var params []reflect.Value
+	var filteredExtraParams []interface{}
+
+	for _, param := range extraParams {
+		for _, requiredOnInstantiation := range p.requiresOnInstantiation {
+			if requiredOnInstantiation == reflect.TypeOf(param) {
+				filteredExtraParams = append(filteredExtraParams, param)
+			}
+		}
 	}
 
-	var params []reflect.Value
-	for _, t := range p.requires {
-		provider, err := sr.providerFor(t)
-		if err != nil {
-			return err
+	for idx, t := range p.requires {
+		r.log.Debugf("walking requires for %v require=%v extraParams=%v", p.ctor.Type(), t, extraParams)
+		provider, found := r.providers[t]
+		if !found {
+			// we support top level direct params, but they need to map exactly (order and types)!
+			// this is a special case and we will terminate the loop for this
+			if !exactSubSignatureMatch(p.ctor.Type(), idx, extraParams) {
+				return fmt.Errorf("no provider for %v (and no exact signature match)", t)
+			}
+			r.log.Infof("exact subtype match %v idx=%v extraParams=%v", p.ctor.Type(), idx, extraParams)
+			filteredExtraParams = extraParams
+			break
+
 		}
-		if err := sr.resolve(provider, extraParams); err != nil {
+		if err := r.resolve(provider, extraParams); err != nil {
 			return err
 		}
 		params = append(params, *provider.instance)
 	}
 
 	// lets attach all extra params
-	for _, p := range extraParams {
+	for _, p := range filteredExtraParams {
 		params = append(params, reflect.ValueOf(p))
 	}
+	r.log.Debugf("filtered extra params are %v ", filteredExtraParams)
 
-	return sr.instantiate(p, params...)
+	return r.instantiate(p, params)
 }
 
-func (sr *ServiceRegistry) instantiate(p *provider, params ...reflect.Value) error {
-	sr.log.Debugf("instantiate %v with %v\n", p.provides, params)
+func mapToValue(values []interface{}) (r []reflect.Value) {
+	for _, i := range values {
+		r = append(r, reflect.ValueOf(i))
+	}
+	return r
+}
+
+func (r *Registry) instantiate(p *provider, params []reflect.Value) error {
+	r.log.Debugf("instantiate %v with %v", p.provides, params)
 
 	if p.expectedParamStruct != nil {
 		params = []reflect.Value{createParamStruct(p.expectedParamStruct, params)}
 	}
-	r := p.ctor.Call(params)
-	if !r[1].IsNil() {
-		return r[1].Interface().(error)
+
+	res := p.ctor.Call(params)
+	if !res[1].IsNil() {
+		return res[1].Interface().(error)
 	}
-	// TODO: check that this isn't nil
-	v := reflect.ValueOf(r[0].Interface())
+	if res[0].IsNil() {
+		return fmt.Errorf("The constructor %v return a nil value, this is not allowed", p.ctor.Type())
+	}
+
+	v := reflect.ValueOf(res[0].Interface())
 	p.instance = &v
 	return nil
+}
+
+// Ctor exposes the constructor function with a reference to the registry so it can be
+// called without passing the registry again
+type ResolvedCtor struct {
+	p *provider
+	r *Registry
+}
+
+// Call call a constructor directly, params need to match the signature exactly in this case.
+func (ctor *ResolvedCtor) Call(params ...interface{}) (interface{}, error) {
+	return ctor.r.interfaceFor(ctor.p, params)
 }
 
 func createParamStruct(t reflect.Type, params []reflect.Value) reflect.Value {
@@ -239,4 +299,16 @@ func embedsType(embedder, embedded reflect.Type) bool {
 		}
 	}
 	return false
+}
+
+func exactSubSignatureMatch(ctorType reflect.Type, idx int, params []interface{}) bool {
+	if ctorType.NumIn()-idx != len(params) {
+		return false
+	}
+	for i := idx; i < ctorType.NumIn(); i++ {
+		if ctorType.In(i) != reflect.TypeOf(params[i-idx]) {
+			return false
+		}
+	}
+	return true
 }

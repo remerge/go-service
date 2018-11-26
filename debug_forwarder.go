@@ -43,23 +43,6 @@ func (f *debugForwader) configureFlags(cmd *cobra.Command) {
 	)
 }
 
-func (e *Executor) ForwardToDebugConns(data []byte) {
-	e.debugForwader.forward(data)
-}
-
-func (e *Executor) HasOpenDebugForwardingConns() bool {
-	return e.debugForwader.hasOpenConnections()
-}
-
-func (e *Executor) WithDebugForwarder(port int) *Executor {
-	err := e.ServiceRegistry.Request(&e.debugForwader, DebugForwaderConfig{Port: port})
-	if err != nil {
-		panic(err)
-	}
-	e.services = append(e.services, e.debugForwader)
-	return e
-}
-
 type debugForwader struct {
 	sync.Mutex
 	Port      int
@@ -91,10 +74,6 @@ func (f *debugForwader) Init() error {
 			f.conns.Store(c.RemoteAddr().String(), c)
 		}
 	}(ln)
-	return nil
-}
-
-func (f *debugForwader) Run() error {
 	return nil
 }
 

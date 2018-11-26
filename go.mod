@@ -3,6 +3,7 @@ module github.com/remerge/go-service
 require (
 	github.com/Shopify/sarama v0.0.0-20180507145726-3c763ff04e6d
 	github.com/cenkalti/backoff v0.0.0-20180518090649-f756bc9a37f8
+	github.com/d4l3k/messagediff v1.2.1
 	github.com/davecgh/go-spew v1.1.1
 	github.com/eapache/go-resiliency v1.1.0
 	github.com/eapache/go-xerial-snappy v0.0.0-20160609142408-bb955e01b934
@@ -18,14 +19,16 @@ require (
 	github.com/modern-go/reflect2 v0.0.0-20180511053014-58118c1ea916
 	github.com/pierrec/lz4 v2.0.5+incompatible
 	github.com/pierrec/xxHash v0.0.0-20170714082455-a0006b13c722
-	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/pkg/errors v0.8.0
 	github.com/rcrowley/go-metrics v0.0.0-20180503174638-e2704e165165
 	github.com/remerge/cue v0.0.0-20180404154012-5ce627d813ef
 	github.com/remerge/go-env v0.0.0-20180212143913-0274550cec6b
 	github.com/remerge/go-lock_free_timer v0.0.0-20180213161223-3b39b49d2c6a
 	github.com/remerge/go-timestr v0.0.0-20180212143953-26332ce36f5a
+	github.com/remerge/go-tools v0.0.0-20181109161802-c3df351fb417
 	github.com/remerge/go-tracker v0.0.0-20180417095915-e9f519cc25f1
 	github.com/remerge/go-xorshift v0.0.0-20180212075615-38a062789887
+	github.com/sanity-io/litter v1.1.0
 	github.com/spf13/cobra v0.0.3
 	github.com/spf13/pflag v1.0.1
 	github.com/stretchr/testify v1.2.2

@@ -243,17 +243,17 @@ func registerRuntimeMemStats(r metrics.Registry) {
 		runtimeMetrics.ReadMemStats)
 }
 
-// nolint: unparam
-func (s *Executor) flushMetrics(freq time.Duration) {
-	registerRuntimeMemStats(s.metricsRegistry)
+func (b *Base) flushMetrics(freq time.Duration) {
+	// TODO: this is iritating as it is called flush but actually does some setup code
+	registerRuntimeMemStats(b.metricsRegistry)
 	go captureRuntimeMemStats(freq)
 
 	ticker := time.NewTicker(freq)
 	defer ticker.Stop()
 
 	for range ticker.C {
-		if flushErr := s.promMetrics.Update(); flushErr != nil {
-			s.Log.Warnf("failures while collect metrics: %v", flushErr)
+		if err := b.promMetrics.Update(); err != nil {
+			b.Log.Warnf("failures while collect metrics: %v", err)
 		}
 	}
 }
