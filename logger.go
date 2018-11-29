@@ -26,7 +26,7 @@ func (l *Logger) Panic(cause interface{}, message string) {
 		return
 	}
 	l.ReportRecovery(cause, message)
-	_ = cue.Close(5 * time.Second) // #nosec
+	_ = cue.Close(5 * time.Second)
 	panic(cause)
 }
 

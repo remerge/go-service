@@ -11,18 +11,18 @@ import (
 	"github.com/remerge/cue"
 	"github.com/remerge/cue/hosted"
 	env "github.com/remerge/go-env"
-	"github.com/remerge/go-service/registry"
+	lft "github.com/remerge/go-lock_free_timer"
 	"github.com/spf13/cobra"
 )
 
-// Base provides common functionality for a main service
-// TODO: complete
-// by default
-// - metric.Registry
-// - logger
-// - prom metrics in production
-// - debug forwarder
-// - debbug server
+// Base provides common main service functionallity and can be embeded in a main service object.
+// It provides
+// - a metrics registry (using our lock free implementation)
+// - a tracker to send message to kafka (if requested)
+// - a HTTP server (if requested)
+// - a debug server (if requested, serves prometeus metrics)
+// - a debug forwarder (if requested)
+// - a rollbar instance (sends logged Errors to rollbar in production mode)
 type Base struct {
 	Name        string
 	Description string
@@ -38,15 +38,13 @@ type Base struct {
 
 	metricsRegistry metrics.Registry
 	promMetrics     *PrometheusMetrics
-
-	Debug struct {
-		Active bool
-	}
 }
 
-func RegisterBase(r *registry.Registry, name string) {
+// RegisterBase registers a Base ctor with a given DI registry. Additonal it registers
+// the ctors for logger, metrics, debug forwarder, tracker, http server and debug http server.
+func RegisterBase(r Registry, name string) {
 	r.Register(func(cmd *cobra.Command) (*Base, error) {
-		metricsRegistry := metrics.DefaultRegistry
+		metricsRegistry := lft.DefaultRegistry
 		base := &Base{
 			Name:            name,
 			Log:             NewLogger(name),
@@ -78,16 +76,7 @@ func RegisterBase(r *registry.Registry, name string) {
 }
 
 func (b *Base) configureFlags(cmd *cobra.Command) {
-	flags := cmd.Flags()
-
-	flags.BoolVar(
-		&b.Debug.Active,
-		"debug",
-		false,
-		"enable debug logging",
-	)
-
-	flags.StringVar(
+	cmd.Flags().StringVar(
 		&b.Rollbar.Token,
 		"rollbar-token",
 		b.Rollbar.Token,
@@ -96,10 +85,6 @@ func (b *Base) configureFlags(cmd *cobra.Command) {
 }
 
 func (b *Base) Init() error {
-	env.Set(env.Env)
-	// TODO: we should do this a bit earlier
-	// setLogFormat(b.Debug.Active)
-
 	b.Log.Info("Start initialization...")
 
 	// configure rollbar
@@ -111,7 +96,7 @@ func (b *Base) Init() error {
 	}
 
 	sarama.Logger = &saramaLoggerWrapper{
-		logger: cue.NewLogger("sarama"),
+		logger: NewLogger("sarama"),
 	}
 
 	// use all cores by default

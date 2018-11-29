@@ -14,13 +14,12 @@ import (
 	"github.com/remerge/cue"
 )
 
-// TODO: use logger from go-service that wrapps things nicely on panic
-type RunnerConfig struct {
-	ShutdownTimeout time.Duration
-	InitTimeout     time.Duration
-	PostShutdown    func(error)
-}
-
+// Runner runs services. Services that implement the Service interface can be added
+// using the Add method. On Run they are started in the order of adding and Runner waits
+// for a shutdown signal. The signal can come from the OS or Stop can be called. If such
+// a signal is received the services are shutdown in reverse order. A timo out for service
+// startup and shutdown can be configured using RunnerConfig. If a service doesn't terminate
+// in time, the whole process is kill with a KILL signal.
 type Runner struct {
 	RunnerConfig
 	services []*runnable
@@ -28,11 +27,20 @@ type Runner struct {
 	log      cue.Logger
 }
 
+// RunnerConfig allows to configure timeouts for a Runner and provides a way to register a
+// post shutdown callback.
+type RunnerConfig struct {
+	ShutdownTimeout time.Duration
+	InitTimeout     time.Duration
+	PostShutdown    func(error)
+}
+
 type runnable struct {
 	Service
 	name string
 }
 
+// NewRunnerDefaultConfig create a default RunnerConfig
 func NewRunnerDefaultConfig() RunnerConfig {
 	return RunnerConfig{
 		InitTimeout:     time.Minute,
@@ -41,20 +49,16 @@ func NewRunnerDefaultConfig() RunnerConfig {
 	}
 }
 
-type RunnerConfigFnc func(c RunnerConfig) RunnerConfig
-
-func WithRunnerDefaultConfig(f RunnerConfigFnc) RunnerConfig {
-	return f(NewRunnerDefaultConfig())
-}
-
+// NewRunner creates a Runner with a default config
 func NewRunner() *Runner {
 	return NewRunnerWithConfig(NewRunnerDefaultConfig())
 }
 
+// NewRunnerWithConfig creates a Runner with a provided config
 func NewRunnerWithConfig(c RunnerConfig) *Runner {
 	r := &Runner{
 		signals:      make(chan os.Signal, 2), // this is buffered as the signal.Notify is using a non blocking send
-		log:          cue.NewLogger("runner"),
+		log:          NewLogger("runner"),
 		RunnerConfig: c,
 	}
 	r.setupSignals()
@@ -88,8 +92,6 @@ func (r *Runner) Run() error {
 	}
 	sig := <-r.signals
 	r.log.Infof("shutdown signaled: %s", sig.String())
-	// TODO: why doesn't this work?
-	// sort.Sort(sort.Reverse(sort.StringSlice(names)))
 	var reverseName []string
 	for i := len(names) - 1; i >= 0; i-- {
 		reverseName = append(reverseName, names[i])

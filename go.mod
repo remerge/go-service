@@ -23,7 +23,7 @@ require (
 	github.com/rcrowley/go-metrics v0.0.0-20180503174638-e2704e165165
 	github.com/remerge/cue v0.0.0-20180404154012-5ce627d813ef
 	github.com/remerge/go-env v0.0.0-20180212143913-0274550cec6b
-	github.com/remerge/go-lock_free_timer v0.0.0-20180213161223-3b39b49d2c6a
+	github.com/remerge/go-lock_free_timer v0.0.0-20181129173822-9894c16a08a7
 	github.com/remerge/go-timestr v0.0.0-20180212143953-26332ce36f5a
 	github.com/remerge/go-tools v0.0.0-20181109161802-c3df351fb417
 	github.com/remerge/go-tracker v0.0.0-20180417095915-e9f519cc25f1

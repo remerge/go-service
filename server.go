@@ -45,7 +45,7 @@ type serverParams struct {
 	Cmd          *cobra.Command
 }
 
-func registerServer(r *registry.Registry, name string) {
+func registerServer(r Registry, name string) {
 	r.Register(func(p *serverParams) (*server, error) {
 		f := &server{
 			Port: p.Port,

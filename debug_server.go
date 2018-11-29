@@ -36,7 +36,7 @@ type DebugEngine struct {
 	*gin.Engine
 }
 
-func registerDebugServer(r *registry.Registry, name string) {
+func registerDebugServer(r Registry, name string) {
 	r.Register(func(p *debugServerParams) (*debugServer, error) {
 		f := &debugServer{
 			server: &server{

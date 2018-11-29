@@ -2,19 +2,24 @@ package service
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
 
 	env "github.com/remerge/go-env"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 type InitFnc func(*RunnerWithRegistry)
 
+var logLevelString string
+
 // TODO: add description
 func Cmd(name string, initFnc InitFnc) *cobra.Command {
-	// TODO: remove setLogFormat
-	setLogFormat(true)
-	cmd := &cobra.Command{}
+	initLogCollector()
+	setLogLevelFrom(parseLogLevelFlat())
 
+	cmd := &cobra.Command{}
 	cmd.Use = name
 	// cmd.Short = fmt.Sprintf("%s: %s", s.Name, s.Description)
 	// cmd.Use = s.Name
@@ -22,6 +27,7 @@ func Cmd(name string, initFnc InitFnc) *cobra.Command {
 
 	// global flags for all commands
 	flags := cmd.PersistentFlags()
+	addLogFlag(flags, &logLevelString)
 
 	flags.StringVar(
 		&env.Env,
@@ -52,4 +58,23 @@ func Cmd(name string, initFnc InitFnc) *cobra.Command {
 	}
 
 	return cmd
+}
+
+func parseLogLevelFlat() (level string) {
+	fs := pflag.NewFlagSet("log", pflag.ContinueOnError)
+	addLogFlag(fs, &level)
+	fs.SetOutput(ioutil.Discard)
+	fs.Parse(os.Args[1:])
+	return level
+}
+
+// Add a log level flag to a given FlagSet
+func addLogFlag(fs *pflag.FlagSet, target *string) {
+	fs.StringVarP(
+		target,
+		"logLevel",
+		"l",
+		"info",
+		"log level (debug,info,warn,error,fatal,off)",
+	)
 }

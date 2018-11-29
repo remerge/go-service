@@ -5,11 +5,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/remerge/cue"
 )
 
 func ginLogger(name string) gin.HandlerFunc {
-	log := cue.NewLogger(name)
+	log := NewLogger(name)
 	return func(c *gin.Context) {
 		start := time.Now()
 		c.Next()
@@ -24,7 +23,7 @@ func ginLogger(name string) gin.HandlerFunc {
 }
 
 func ginRecovery(name string) gin.HandlerFunc {
-	log := cue.NewLogger(name)
+	log := NewLogger(name)
 	return func(c *gin.Context) {
 		defer func() {
 			if err := recover(); err != nil {
