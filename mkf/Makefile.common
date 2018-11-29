@@ -1,0 +1,93 @@
+GO=GO111MODULE=on go
+GOFMT=gofmt -w -s
+REVIVE := $(GOBIN)/revive
+GOFILES=$(shell git ls-files | grep '\.go$$')
+MAIN=./cmd/$(PROJECT)
+
+ifeq ($(GOTEST_TIMEOUT),)
+	GOTEST_TIMEOUT=60s
+endif
+
+CODE_VERSION=$(TRAVIS_COMMIT)
+ifeq ($(CODE_VERSION),)
+	CODE_VERSION=$(shell git rev-parse --short HEAD)-dev
+endif
+
+CODE_BUILD=$(TRAVIS_REPO_SLUG)\#$(TRAVIS_JOB_NUMBER)
+ifeq ($(CODE_BUILD),\#)
+	CODE_BUILD=$(PACKAGE)\#$(shell whoami)
+endif
+
+LDIMPORT=$(PACKAGE)/vendor/github.com/remerge/go-service
+LDFLAGS=-X $(LDIMPORT).CodeVersion=$(CODE_VERSION) -X $(LDIMPORT).CodeBuild=$(CODE_BUILD)@$(shell date -u +%FT%TZ)
+
+.PHONY: build build-dist run run-bin clean lint test bench fmt dep up gen proto-dep proto release deploy
+
+all: build
+
+build: fmt
+	CGO_ENABLED=0 $(GO) test -v -i
+	CGO_ENABLED=0 $(GO) build -v -i -ldflags "$(LDFLAGS)" -o $(PROJECT) $(MAIN)
+
+build-dist: fmt
+	CGO_ENABLED=0 \
+	GOOS=linux GOARCH=amd64 \
+	$(GO) build -v -i -ldflags "$(LDFLAGS)" -o $(PROJECT).x86_64 $(MAIN)
+	CGO_ENABLED=0 \
+	GOOS=linux GOARCH=arm64 \
+	$(GO) build -v -i -ldflags "$(LDFLAGS)" -o $(PROJECT).aarch64 $(MAIN)
+
+run:
+	$(GO) run $(MAIN)
+
+run-bin: build
+	./$(PROJECT)
+
+clean:
+	$(GO) clean -i -x
+	rm -f $(PROJECT)
+
+# currently there is no good solution for Go 1.11 to manage global vs local tools
+# we just use the "easy" way for now. People have to update this manually if they need a newer version
+# see https://github.com/golang/go/issues/24250 , https://github.com/golang/go/issues/25922 and https://github.com/golang/go/issues/27653
+# another option is https://github.com/twitchtv/retool but that is another dependancy that makes things more complex 
+$(REVIVE):
+	which revive >/dev/null 2>&1 || GO111MODULE=off go get -u github.com/remerge/revive
+
+lint: $(REVIVE)
+	revive -config mkf/revive.toml  -formatter friendly $(REVIVELINTER_EXCLUDES)  ./...
+		
+test: lint
+	$(GO) test -timeout $(GOTEST_TIMEOUT) -v ./...
+
+bench: build
+	$(GO) test -bench=. -benchmem -cpu 32 ./...
+
+# builds with escape analysis active
+build-escape:
+	CGO_ENABLED=0 $(GO) build -v -gcflags '-m -m -l -e' -ldflags "$(LDFLAGS)" ./...
+	
+fmt:
+	$(GOFMT) $(GOFILES)
+
+
+gen:
+	$(GO) generate ./...
+	$(GOFMT) $(GOFILES)
+
+release:
+	git push origin master:production
+
+deploy:
+	/bin/bash -c 'cd ../chef.new && knife ssh roles:$(PROJECT) sudo chef-client'
+	/bin/bash -c 'cd ../chef && knife sudo -Q roles:$(PROJECT) chef-client'
+
+# if included update the makefile subtree to the latest version
+check-makefile-remote:
+	git remote | grep makefile || git remote add makefile https://github.com/remerge/go-makefile.git
+
+update-makefile: check-makefile-remote
+	git subtree pull --prefix=mkf makefile master
+
+upstream-makefile: check-makefile-remote
+	git subtree push --prefix=mkf makefile master
