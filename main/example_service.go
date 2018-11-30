@@ -5,6 +5,11 @@ import (
 	"os"
 
 	"github.com/remerge/go-service"
+
+
+
+
+
 	"github.com/spf13/cobra"
 )
 
@@ -17,7 +22,7 @@ func (s *ExampleService) Init() error {
 	return nil
 }
 
-func (s *ExampleService) Shutdown(sig os.Signal) {
+func (s *ExampleService) Shutdown(os.Signal) {
 	s.Log.Info("Shutdown...")
 }
 

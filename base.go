@@ -23,6 +23,8 @@ import (
 // - a debug server (if requested, serves prometeus metrics)
 // - a debug forwarder (if requested)
 // - a rollbar instance (sends logged Errors to rollbar in production mode)
+//
+// On startup Base checks if the previous shutdown was graceful.
 type Base struct {
 	Name        string
 	Description string
@@ -157,26 +159,32 @@ func (b *Base) Shutdown(sig os.Signal) {
 // 	return e
 // }
 
-func (b *Base) CreateTracker(r *RunnerWithRegistry, port int) {
+// CreateTracker creates a tracker object for this Base
+func (b *Base) CreateTracker(r *RunnerWithRegistry) {
 	r.Create(&b.Tracker)
 }
 
+// CreateTracker creates a server object for this Base listening on a given port
 func (b *Base) CreateServer(r *RunnerWithRegistry, port int) {
 	r.Create(&b.Server, ServerConfig{Port: port})
 }
 
+// CreateTracker creates a debug server object for this Base listening on a given port
 func (b *Base) CreateDebugServer(r *RunnerWithRegistry, defaultPort int) {
 	r.Create(&b.debugServer, ServerConfig{Port: defaultPort})
 }
 
+// CreateTracker creates a debug forwarder for this Base listening on a given port
 func (b *Base) CreateDebugForwarder(r *RunnerWithRegistry, port int) {
 	r.Create(&b.debugForwader, DebugForwaderConfig{Port: port})
 }
 
+// ForwardToDebugConns forwards data to connected debug listeners
 func (b *Base) ForwardToDebugConns(data []byte) {
 	b.debugForwader.forward(data)
 }
 
+// HasOpenDebugForwardingConns checks if there are open connections  to debug listeners
 func (b *Base) HasOpenDebugForwardingConns() bool {
 	return b.debugForwader.hasOpenConnections()
 }

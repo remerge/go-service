@@ -22,7 +22,7 @@ func (s *testService) Init() error {
 	s.initRun = true
 	return s.errOnInit
 }
-func (s *testService) Shutdown(sig os.Signal) {
+func (s *testService) Shutdown(os.Signal) {
 	time.Sleep(s.sleepOnShutdown)
 	s.shutdownRun = true
 }
