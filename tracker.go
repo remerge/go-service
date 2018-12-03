@@ -6,15 +6,15 @@ import (
 	"strings"
 
 	env "github.com/remerge/go-env"
+	"github.com/remerge/go-tools/fqdn"
 	gotracker "github.com/remerge/go-tracker"
-	 "github.com/remerge/go-tools/fqdn"
 
 	"github.com/spf13/cobra"
 
 	"github.com/remerge/cue"
 )
 
-type tracker struct {
+type Tracker struct {
 	gotracker.Tracker
 	Name          string
 	Connect       string
@@ -23,8 +23,8 @@ type tracker struct {
 }
 
 func registerTracker(r Registry, name string) {
-	r.Register(func(log cue.Logger, cmd *cobra.Command) (*tracker, error) {
-		t := &tracker{
+	r.Register(func(log cue.Logger, cmd *cobra.Command) (*Tracker, error) {
+		t := &Tracker{
 			log:  log,
 			Name: name,
 		}
@@ -33,7 +33,7 @@ func registerTracker(r Registry, name string) {
 	})
 }
 
-func (t *tracker) configureFlags(cmd *cobra.Command) {
+func (t *Tracker) configureFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().StringVar(
 		&t.EventMetadata.Cluster,
 		"cluster",
@@ -47,7 +47,7 @@ func (t *tracker) configureFlags(cmd *cobra.Command) {
 	)
 }
 
-func (t *tracker) Init() error {
+func (t *Tracker) Init() error {
 	t.EventMetadata.Service = t.Name
 	t.EventMetadata.Environment = env.Env
 	t.EventMetadata.Host = fqdn.Get()
@@ -72,7 +72,7 @@ func (t *tracker) Init() error {
 	return nil
 }
 
-func (t *tracker) Shutdown(os.Signal) {
+func (t *Tracker) Shutdown(os.Signal) {
 	if t != nil && t.Tracker != nil {
 		t.log.Info("tracker shutdown")
 		t.Tracker.Close()

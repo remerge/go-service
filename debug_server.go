@@ -18,7 +18,7 @@ import (
 )
 
 type debugServer struct {
-	*server
+	*Server
 	metricsRegistry metrics.Registry
 	promMetrics     *PrometheusMetrics
 }
@@ -39,7 +39,7 @@ type DebugEngine struct {
 func registerDebugServer(r Registry, name string) {
 	r.Register(func(p *debugServerParams) (*debugServer, error) {
 		f := &debugServer{
-			server: &server{
+			Server: &Server{
 				Name:              name,
 				Port:              p.Port,
 				log:               p.Log,
@@ -68,7 +68,7 @@ func (s *debugServer) configureFlags(cmd *cobra.Command) {
 }
 
 func (s *debugServer) Init() error {
-	if err := s.server.Init(); err != nil {
+	if err := s.Server.Init(); err != nil {
 		return err
 	}
 	go s.serveDebug()
@@ -77,7 +77,7 @@ func (s *debugServer) Init() error {
 
 func (s *debugServer) Shutdown(sig os.Signal) {
 	s.log.Info("shutdown debug server")
-	s.server.Shutdown(sig)
+	s.Server.Shutdown(sig)
 }
 
 func (s *debugServer) serveDebug() {

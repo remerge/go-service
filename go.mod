@@ -10,11 +10,15 @@ require (
 	github.com/eapache/queue v0.0.0-20180227141424-093482f3f8ce
 	github.com/gin-contrib/sse v0.0.0-20170109093832-22d885f9ecc7
 	github.com/gin-gonic/gin v0.0.0-20180512030042-bf7803815b0b
+	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/golang/protobuf v0.0.0-20180522224251-3a3da3a4e267
 	github.com/golang/snappy v0.0.0-20180518054509-2e65f85255db
 	github.com/inconshreveable/mousetrap v1.0.0
 	github.com/json-iterator/go v0.0.0-20180526014329-8744d7c5c7b4
+	github.com/maruel/panicparse v1.1.1 // indirect
+	github.com/mattn/go-colorable v0.0.9 // indirect
 	github.com/mattn/go-isatty v0.0.0-20171107050531-6ca4dbf54d38
+	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd
 	github.com/modern-go/reflect2 v0.0.0-20180511053014-58118c1ea916
 	github.com/pierrec/lz4 v2.0.5+incompatible

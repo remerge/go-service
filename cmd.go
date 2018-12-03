@@ -54,7 +54,10 @@ func Cmd(name string, initFnc InitFnc) *cobra.Command {
 	initFnc(r)
 
 	cmd.Run = func(cmd *cobra.Command, args []string) {
-		r.Run()
+		if err := r.Run(); err != nil {
+			log := NewLogger("cmd")
+			log.Panic(err, "service execution failed")
+		}
 	}
 
 	return cmd
@@ -72,7 +75,7 @@ func parseLogLevelFlat() (level string) {
 func addLogFlag(fs *pflag.FlagSet, target *string) {
 	fs.StringVarP(
 		target,
-		"logLevel",
+		"log-level",
 		"l",
 		"info",
 		"log level (debug,info,warn,error,fatal,off)",

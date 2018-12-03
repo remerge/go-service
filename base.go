@@ -32,10 +32,10 @@ type Base struct {
 	Log     *Logger
 	Rollbar hosted.Rollbar
 
-	Tracker *tracker
-	Server  *server
+	*Tracker
+	*Server
+	DebugServer *debugServer
 
-	*debugServer
 	*debugForwader
 
 	metricsRegistry metrics.Registry
@@ -171,7 +171,7 @@ func (b *Base) CreateServer(r *RunnerWithRegistry, port int) {
 
 // CreateTracker creates a debug server object for this Base listening on a given port
 func (b *Base) CreateDebugServer(r *RunnerWithRegistry, defaultPort int) {
-	r.Create(&b.debugServer, ServerConfig{Port: defaultPort})
+	r.Create(&b.DebugServer, ServerConfig{Port: defaultPort})
 }
 
 // CreateTracker creates a debug forwarder for this Base listening on a given port

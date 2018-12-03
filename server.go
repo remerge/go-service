@@ -14,7 +14,7 @@ import (
 	"github.com/remerge/go-service/registry"
 )
 
-type server struct {
+type Server struct {
 	Name string
 	Port int
 
@@ -46,8 +46,8 @@ type serverParams struct {
 }
 
 func registerServer(r Registry, name string) {
-	r.Register(func(p *serverParams) (*server, error) {
-		f := &server{
+	r.Register(func(p *serverParams) (*Server, error) {
+		f := &Server{
 			Port: p.Port,
 			log:  p.Log,
 			Name: name,
@@ -57,7 +57,7 @@ func registerServer(r Registry, name string) {
 	})
 }
 
-func (s *server) configureFlags(cmd *cobra.Command) {
+func (s *Server) configureFlags(cmd *cobra.Command) {
 	flags := cmd.Flags()
 
 	flags.IntVar(
@@ -97,7 +97,7 @@ func (s *server) configureFlags(cmd *cobra.Command) {
 	)
 }
 
-func (s *server) Init() error {
+func (s *Server) Init() error {
 	gin.SetMode("release")
 	s.Engine = gin.New()
 	s.Engine.Use(
@@ -107,7 +107,7 @@ func (s *server) Init() error {
 	return nil
 }
 
-func (s *server) Shutdown(os.Signal) {
+func (s *Server) Shutdown(os.Signal) {
 	var serverChan, tlsServerChan <-chan struct{}
 
 	if s.TLS.Server != nil {
@@ -135,7 +135,7 @@ func (s *server) Shutdown(os.Signal) {
 	}
 }
 
-func (s *server) Serve(handler http.Handler) {
+func (s *Server) Serve(handler http.Handler) {
 	if handler == nil {
 		handler = s.Engine
 	}
@@ -162,7 +162,7 @@ func (s *server) Serve(handler http.Handler) {
 // ServeTLS starts a TLS encrypted HTTPS server on `service.Server.TLS.Port`.
 // TLS support is disabled by default and needs to be configured with proper
 // certificates in `service.Server.TLS.Key` and `service.Server.TLS.Cert`.
-func (s *server) ServeTLS(handler http.Handler) {
+func (s *Server) ServeTLS(handler http.Handler) {
 	if handler == nil {
 		handler = s.Engine
 	}
