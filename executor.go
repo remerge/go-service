@@ -44,6 +44,8 @@ type Executor struct {
 	metricsRegistry metrics.Registry
 	promMetrics     *PrometheusMetrics
 
+	enableStackdriver bool
+
 	doneClosed int32
 	Debug      struct {
 		Active bool
@@ -144,6 +146,7 @@ func (s *Executor) init() error {
 	if err != nil {
 		return err
 	}
+	s.initStackdriver()
 	return s.service.Init()
 }
 
