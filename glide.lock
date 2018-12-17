@@ -1,5 +1,5 @@
-hash: ff79917b69de5ff3e0b668905f40c25f7cbfd814ef7622522070f2b75ecf79ab
-updated: 2018-12-17T14:37:40.267272+01:00
+hash: 8ee819b8e8b05af88ade94d51b4e3fee9891ff719d0f20bc396071b3e83a207c
+updated: 2018-12-17T14:49:56.537133+01:00
 imports:
 - name: cloud.google.com/go
   version: 0ebda48a7f143b1cce9eb37a8c1106ac762a3430
@@ -167,6 +167,7 @@ imports:
   - googleapis/devtools/cloudprofiler/v2
   - googleapis/rpc/errdetails
   - googleapis/rpc/status
+  - protobuf/field_mask
 - name: google.golang.org/grpc
   version: 7a6a684ca69eb4cae85ad0a484f2e531598c047b
   subpackages:

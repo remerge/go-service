@@ -10,6 +10,7 @@ import:
 - package: github.com/remerge/go-lock_free_timer
 - package: github.com/cenkalti/backoff
 - package: cloud.google.com/go
+  version: ^0.34.0
   subpackages:
   - profiler
 testImport:
