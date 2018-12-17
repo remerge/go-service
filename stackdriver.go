@@ -1,8 +1,9 @@
 package service
 
 import (
-	"cloud.google.com/go/profiler"
 	"os"
+
+	"cloud.google.com/go/profiler"
 )
 
 func (e *Executor) WithStackDriver() *Executor {
@@ -15,7 +16,7 @@ func (e *Executor) WithStackDriver() *Executor {
 	return e
 }
 
-func (e *Executor) initStackdriver() nil {
+func (e *Executor) initStackdriver() {
 	if !e.enableStackdriver {
 		return
 	}
