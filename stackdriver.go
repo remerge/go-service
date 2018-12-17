@@ -22,22 +22,22 @@ func (e *Executor) initStackdriver() {
 	}
 	keyPath := os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")
 	if keyPath == "" {
-		e.log.Warn("could not start stackdriver profiler: env variable GOOGLE_APPLICATION_CREDENTIALS is empty")
+		e.Log.Warn("could not start stackdriver profiler: env variable GOOGLE_APPLICATION_CREDENTIALS is empty")
 		return
 	}
 
 	if _, err := os.Stat(keyPath); os.IsNotExist(err) {
-		e.log.Warnf("could not start stackdriver profiler: keyfile does not exist %v", keyPath)
+		e.Log.Warnf("could not start stackdriver profiler: keyfile does not exist %v", keyPath)
 		return
 	}
 
-	e.log.Info("starting stackdriver profiler")
+	e.Log.Info("starting stackdriver profiler")
 
 	if err := profiler.Start(profiler.Config{
 		Service:        e.Name,
 		ServiceVersion: CodeVersion,
 		ProjectID:      "stackdriver-profiler-test",
 	}); err != nil {
-		e.log.Warnf("could not start stackdriver profiler: %v", err)
+		e.Log.Warnf("could not start stackdriver profiler: %v", err)
 	}
 }
