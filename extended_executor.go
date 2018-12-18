@@ -317,7 +317,7 @@ func (s *Executor) serveDebug(port int) {
 	})
 
 	s.Server.Debug.Engine.GET("/meta", func(c *gin.Context) {
-		c.JSON(200, map[string]string{"service": s.Name, "version": CodeVersion})
+		c.JSON(200, map[string]interface{}{"service": s.Name, "version": CodeVersion, "uptime": int64(time.Now().Sub(StartedTimestamp))})
 	})
 
 	s.Server.Debug.Server = &graceful.Server{
