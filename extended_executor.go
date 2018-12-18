@@ -292,6 +292,10 @@ func (s *Executor) serveDebug(port int) {
 		gin.WrapH(pprof.Handler("threadcreate")))
 	s.Server.Debug.Engine.GET("/pprof/trace",
 		gin.WrapF(pprof.Trace))
+	s.Server.Debug.Engine.GET("/pprof/mutex",
+		gin.WrapF(pprof.Handler("mutex")))
+	s.Server.Debug.Engine.GET("/pprof/allocs",
+		gin.WrapF(pprof.Handler("allocs")))
 
 	s.Server.Debug.Engine.GET("/blockprof/:rate", func(c *gin.Context) {
 		r, err := strconv.Atoi(c.Param("rate"))
