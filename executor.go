@@ -17,6 +17,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
+//StartedTimestamp is the timestamp when the Executor.init call happend.
+var StartedTimestamp time.Time
+
 // Executor is the base for implementing custom services based on go-service. It
 // should be extended with custom command line options and state required for
 // the service to function.
@@ -87,6 +90,8 @@ func (s *Executor) run() error {
 }
 
 func (s *Executor) init() error {
+	StartedTimestamp = time.Now()
+
 	if strings.Contains(s.Name, " ") {
 		return fmt.Errorf("Name %v should not contain spaces", s.Name)
 	}
