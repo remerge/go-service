@@ -312,6 +312,10 @@ func (s *Executor) serveDebug(port int) {
 		c.String(http.StatusOK, s.promMetrics.String())
 	})
 
+	s.Server.Debug.Engine.GET("/meta", func(c *gin.Context) {
+		c.JSON(200, map[string]string{"service": s.Name, "version": CodeVersion})
+	})
+
 	s.Server.Debug.Server = &graceful.Server{
 		Timeout:          s.Server.ShutdownTimeout,
 		NoSignalHandling: true,
