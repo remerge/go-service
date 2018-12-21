@@ -10,10 +10,10 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
-	"github.com/rcrowley/go-metrics"
+	metrics "github.com/rcrowley/go-metrics"
 	"github.com/remerge/cue"
 	"github.com/remerge/cue/hosted"
-	"github.com/remerge/go-env"
+	env "github.com/remerge/go-env"
 	"github.com/spf13/cobra"
 )
 
@@ -53,11 +53,15 @@ type Executor struct {
 	Debug      struct {
 		Active bool
 	}
+
+	InitTimeout time.Duration
 }
 
 // NewExecutor creates new basic executor
 func NewExecutor(name string, service Service) *Executor {
-	s := &Executor{}
+	s := &Executor{
+		InitTimeout: 5 * time.Minute,
+	}
 	s.service = service
 	s.Name = name
 	s.Log = NewLogger(name)
@@ -215,7 +219,7 @@ func (s *Executor) buildCommand() *cobra.Command {
 			if err != nil {
 				s.Log.Panic(err, "init failed")
 			}
-		case <-time.After(time.Minute * 5):
+		case <-time.After(s.InitTimeout):
 			s.Log.Panic(errors.New("init timeout reached"), "init timeout reached")
 		}
 		s.readyC <- struct{}{}
