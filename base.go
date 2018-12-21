@@ -32,11 +32,12 @@ type Base struct {
 	Log     *Logger
 	Rollbar hosted.Rollbar
 
-	*Tracker
-	*Server
-	DebugServer *debugServer
+	Tracker *Tracker
+	Server  *Server
 
-	*debugForwader
+	DebugServer   *debugServer
+	debugForwader *debugForwader
+	stackdriver   *stackdriver
 
 	metricsRegistry metrics.Registry
 	promMetrics     *PrometheusMetrics
@@ -72,6 +73,7 @@ func RegisterBase(r Registry, name string) {
 		registerTracker(r, name)
 		registerServer(r, name)
 		registerDebugServer(r, name)
+		registerStackdriver(r, name)
 
 		return base, nil
 	})
@@ -164,19 +166,24 @@ func (b *Base) CreateTracker(r *RunnerWithRegistry) {
 	r.Create(&b.Tracker)
 }
 
-// CreateTracker creates a server object for this Base listening on a given port
+// CreateServer creates a server object for this Base listening on a given port
 func (b *Base) CreateServer(r *RunnerWithRegistry, port int) {
 	r.Create(&b.Server, ServerConfig{Port: port})
 }
 
-// CreateTracker creates a debug server object for this Base listening on a given port
+// CreateDebugServer creates a debug server object for this Base listening on a given port
 func (b *Base) CreateDebugServer(r *RunnerWithRegistry, defaultPort int) {
 	r.Create(&b.DebugServer, ServerConfig{Port: defaultPort})
 }
 
-// CreateTracker creates a debug forwarder for this Base listening on a given port
+// CreateDebugForwarder creates a debug forwarder for this Base listening on a given port
 func (b *Base) CreateDebugForwarder(r *RunnerWithRegistry, port int) {
 	r.Create(&b.debugForwader, DebugForwaderConfig{Port: port})
+}
+
+// CreateStackdriver create a stackdriver service
+func (b *Base) CreateStackdriver(r *RunnerWithRegistry) {
+	r.Create(&b.stackdriver)
 }
 
 // ForwardToDebugConns forwards data to connected debug listeners

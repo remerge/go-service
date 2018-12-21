@@ -17,10 +17,16 @@ import (
 	"github.com/remerge/go-service/registry"
 )
 
+// debugServer provides:
+// - /meta for service metadata
+// - /pprof for go profiling
+// - /metrics for prometehus metrics
+// - /panic to trigger a panic ;-)
 type debugServer struct {
 	*Server
-	metricsRegistry metrics.Registry
-	promMetrics     *PrometheusMetrics
+	metricsRegistry  metrics.Registry
+	promMetrics      *PrometheusMetrics
+	serviceStartTime time.Time
 }
 
 type debugServerParams struct {
@@ -71,6 +77,8 @@ func (s *debugServer) Init() error {
 	if err := s.Server.Init(); err != nil {
 		return err
 	}
+
+	s.serviceStartTime = time.Now()
 	go s.serveDebug()
 	return nil
 }
@@ -81,31 +89,19 @@ func (s *debugServer) Shutdown(sig os.Signal) {
 }
 
 func (s *debugServer) serveDebug() {
-	// expvar & go-metrics
-	s.Engine.GET("/vars",
-		gin.WrapH(exp.ExpHandler(s.metricsRegistry)))
-
-	// wrap pprof in gin
-	s.Engine.GET("/pprof/",
-		gin.WrapF(pprof.Index))
-	s.Engine.GET("/pprof/block",
-		gin.WrapH(pprof.Handler("block")))
-	s.Engine.GET("/pprof/cmdline",
-		gin.WrapF(pprof.Cmdline))
-	s.Engine.GET("/pprof/goroutine",
-		gin.WrapH(pprof.Handler("goroutine")))
-	s.Engine.GET("/pprof/heap",
-		gin.WrapH(pprof.Handler("heap")))
-	s.Engine.GET("/pprof/profile",
-		gin.WrapF(pprof.Profile))
-	s.Engine.GET("/pprof/symbol",
-		gin.WrapF(pprof.Symbol))
-	s.Engine.POST("/pprof/symbol",
-		gin.WrapF(pprof.Symbol))
-	s.Engine.GET("/pprof/threadcreate",
-		gin.WrapH(pprof.Handler("threadcreate")))
-	s.Engine.GET("/pprof/trace",
-		gin.WrapF(pprof.Trace))
+	s.Engine.GET("/vars", gin.WrapH(exp.ExpHandler(s.metricsRegistry))) // expvar & go-metrics
+	s.Engine.GET("/pprof/", gin.WrapF(pprof.Index))
+	s.Engine.GET("/pprof/block", gin.WrapH(pprof.Handler("block")))
+	s.Engine.GET("/pprof/cmdline", gin.WrapF(pprof.Cmdline))
+	s.Engine.GET("/pprof/goroutine", gin.WrapH(pprof.Handler("goroutine")))
+	s.Engine.GET("/pprof/heap", gin.WrapH(pprof.Handler("heap")))
+	s.Engine.GET("/pprof/profile", gin.WrapF(pprof.Profile))
+	s.Engine.GET("/pprof/symbol", gin.WrapF(pprof.Symbol))
+	s.Engine.POST("/pprof/symbol", gin.WrapF(pprof.Symbol))
+	s.Engine.GET("/pprof/threadcreate", gin.WrapH(pprof.Handler("threadcreate")))
+	s.Engine.GET("/pprof/trace", gin.WrapF(pprof.Trace))
+	s.Engine.GET("/pprof/mutex", gin.WrapH(pprof.Handler("mutex")))
+	s.Engine.GET("/pprof/allocs", gin.WrapH(pprof.Handler("allocs")))
 
 	s.Engine.GET("/blockprof/:rate", func(c *gin.Context) {
 		r, err := strconv.Atoi(c.Param("rate"))
@@ -124,6 +120,14 @@ func (s *debugServer) serveDebug() {
 	s.Engine.GET("/metrics", func(c *gin.Context) {
 		c.Header("Content-Type", "text/plain; version=0.0.4")
 		c.String(http.StatusOK, s.promMetrics.String())
+	})
+
+	s.Engine.GET("/meta", func(c *gin.Context) {
+		c.JSON(200, map[string]interface{}{
+			"service": s.Name,
+			"version": CodeVersion,
+			"uptime":  int64(time.Now().Sub(s.serviceStartTime)),
+		})
 	})
 
 	s.log.WithFields(cue.Fields{
