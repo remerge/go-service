@@ -5,8 +5,8 @@ import (
 	"runtime/pprof"
 	"time"
 
-	"github.com/rcrowley/go-metrics"
-	"github.com/remerge/go-lock_free_timer"
+	metrics "github.com/rcrowley/go-metrics"
+	lft "github.com/remerge/go-lock_free_timer"
 )
 
 var (
@@ -45,6 +45,7 @@ var (
 		NumGoroutine metrics.Gauge
 		NumThread    metrics.Gauge
 		ReadMemStats metrics.Timer
+		Uptime       metrics.Gauge
 	}
 	frees   uint64
 	lookups uint64
@@ -56,9 +57,17 @@ var (
 
 // CaptureRuntimeMemStats captures new values for the Go runtime statistics
 // exported in runtime.MemStats.  This is designed to be called as a goroutine.
-func captureRuntimeMemStats(d time.Duration) {
-	for range time.Tick(d) {
-		captureRuntimeMemStatsOnce()
+func captureRuntimeMemStats(d time.Duration, closeChan <-chan struct{}) {
+	ticker := time.NewTicker(d)
+	defer ticker.Stop()
+	startTime := time.Now()
+	for {
+		select {
+		case <-closeChan:
+			return
+		case <-ticker.C:
+			captureRuntimeMemStatsOnce(startTime)
+		}
 	}
 }
 
@@ -70,10 +79,11 @@ func captureRuntimeMemStats(d time.Duration) {
 // Be very careful with this because runtime.ReadMemStats calls the C functions
 // runtime·semacquire(&runtime·worldsema) and runtime·stoptheworld() and that
 // last one does what it says on the tin.
-func captureRuntimeMemStatsOnce() {
+func captureRuntimeMemStatsOnce(startTime time.Time) {
 	t := time.Now()
 	runtime.ReadMemStats(&memStats) // This takes 50-200us.
 	runtimeMetrics.ReadMemStats.UpdateSince(t)
+	runtimeMetrics.Uptime.Update(int64(time.Since(startTime)))
 
 	runtimeMetrics.MemStats.Alloc.Update(int64(memStats.Alloc))
 	runtimeMetrics.MemStats.BuckHashSys.Update(int64(memStats.BuckHashSys))
@@ -178,6 +188,7 @@ func registerRuntimeMemStats(r metrics.Registry) {
 	runtimeMetrics.NumGoroutine = metrics.NewGauge()
 	runtimeMetrics.NumThread = metrics.NewGauge()
 	runtimeMetrics.ReadMemStats = lft.NewLockFreeTimer()
+	runtimeMetrics.Uptime = metrics.GetOrRegisterGauge("go_service,version="+CodeVersion+" uptime", r)
 
 	_ = r.Register("go_runtime mem_stat_alloc",
 		runtimeMetrics.MemStats.Alloc)
@@ -243,17 +254,22 @@ func registerRuntimeMemStats(r metrics.Registry) {
 		runtimeMetrics.ReadMemStats)
 }
 
-func (b *Base) flushMetrics(freq time.Duration) {
+func (b *Base) runMetricsFlusher(freq time.Duration, closeChan <-chan struct{}) {
 	// TODO: this is iritating as it is called flush but actually does some setup code
 	registerRuntimeMemStats(b.metricsRegistry)
-	go captureRuntimeMemStats(freq)
+	go captureRuntimeMemStats(freq, closeChan)
 
 	ticker := time.NewTicker(freq)
 	defer ticker.Stop()
 
-	for range ticker.C {
-		if err := b.promMetrics.Update(); err != nil {
-			b.Log.Warnf("failures while collect metrics: %v", err)
+	for {
+		select {
+		case <-closeChan:
+			return
+		case <-ticker.C:
+			if err := b.promMetrics.Update(); err != nil {
+				b.Log.Warnf("failures while collect metrics: %v", err)
+			}
 		}
 	}
 }

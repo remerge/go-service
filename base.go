@@ -41,6 +41,7 @@ type Base struct {
 
 	metricsRegistry metrics.Registry
 	promMetrics     *PrometheusMetrics
+	closeChannel    chan struct{}
 }
 
 // RegisterBase registers a Base ctor with a given DI registry. Additonal it registers
@@ -53,6 +54,7 @@ func RegisterBase(r Registry, name string) {
 			Log:             NewLogger(name),
 			metricsRegistry: metricsRegistry,
 			promMetrics:     NewPrometheusMetrics(metricsRegistry, name),
+			closeChannel:    make(chan struct{}),
 		}
 
 		base.configureFlags(cmd)
@@ -110,7 +112,7 @@ func (b *Base) Init() error {
 
 	// flush prom metrics every 10s
 	if env.IsProd() {
-		go b.flushMetrics(10 * time.Second)
+		go b.runMetricsFlusher(10*time.Second, b.closeChannel)
 	}
 
 	// create cache folder if missing #nosec
@@ -146,6 +148,10 @@ func (b *Base) Shutdown(sig os.Signal) {
 		v = sig.String()
 	}
 	b.Log.WithValue("signal", v).Info("service shutdown")
+
+	// stop metrics - in theory we need to wait for them ... maybe we should make a service out of them as well
+	close(b.closeChannel)
+
 	_, err := os.Create("cache/.shutdown_done")
 	if err != nil {
 		_ = b.Log.Errorf(err, "Error creating shutdown file")
