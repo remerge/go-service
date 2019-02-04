@@ -137,7 +137,7 @@ func (r *Runner) initServices() error {
 			}
 			r.log.WithFields(cue.Fields{"service": s.name, "took": time.Now().Sub(t)}).Info("service init successful")
 		case <-timer.C:
-			return newTimeoutError("timeout on service init", s.name)
+			return newTimeoutError("timeout on service init", s.name, r.InitTimeout)
 		}
 	}
 	return nil
@@ -173,7 +173,7 @@ func (r *Runner) shutdownServices(sig os.Signal) error {
 		select {
 		case <-c: // nothing needs to be done
 		case <-timer.C:
-			err := newTimeoutError("timeout on service shutdown", shuttingDown.name).logTo(r.log)
+			err := newTimeoutError("timeout on service shutdown", shuttingDown.name, r.ShutdownTimeout).logTo(r.log)
 			shuttingDown = nil
 			return err
 		}
@@ -209,18 +209,19 @@ func (r *Runner) watchShutdown(ticker *time.Ticker, s *runnable) {
 type timeoutError struct {
 	msg     string
 	service string
+	timeout time.Duration
 }
 
-func newTimeoutError(msg, service string) *timeoutError {
-	return &timeoutError{msg: msg, service: service}
+func newTimeoutError(msg, service string, timeout time.Duration) *timeoutError {
+	return &timeoutError{msg: msg, service: service, timeout: timeout}
 }
 
 func (e *timeoutError) Error() string {
-	return fmt.Sprintf("%s service=%s", e.msg, e.service)
+	return fmt.Sprintf("%s service=%s after=%v", e.msg, e.service, e.timeout)
 }
 
 func (e *timeoutError) logTo(log cue.Logger) error {
-	log.WithValue("service", e.service).Warn(e.msg)
+	log.WithFields(cue.Fields{"service": e.service, "timeout": e.timeout}).Warn(e.msg)
 	return e
 }
 
