@@ -73,6 +73,7 @@ func (p *Healthcheck) Run() {
 		return
 	}
 	if atomic.CompareAndSwapInt32(&p.running, 0, 1) {
+		p.Register("uptime", &NilHealthChecker{})
 		go p.loop()
 	}
 }
