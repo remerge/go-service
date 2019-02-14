@@ -29,7 +29,7 @@ type HealthChecker interface {
 }
 
 // NilHealthChecker always return nil as CheckHealth() result
-type NilHealthChecker struct {}
+type NilHealthChecker struct{}
 
 func (*NilHealthChecker) CheckHealth() error {
 	return nil

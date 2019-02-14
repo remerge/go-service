@@ -45,7 +45,6 @@ var (
 		NumGoroutine metrics.Gauge
 		NumThread    metrics.Gauge
 		ReadMemStats metrics.Timer
-		Uptime       metrics.Gauge
 	}
 	frees   uint64
 	lookups uint64
@@ -83,7 +82,6 @@ func captureRuntimeMemStatsOnce(startTime time.Time) {
 	t := time.Now()
 	runtime.ReadMemStats(&memStats) // This takes 50-200us.
 	runtimeMetrics.ReadMemStats.UpdateSince(t)
-	runtimeMetrics.Uptime.Update(int64(time.Since(startTime)))
 
 	runtimeMetrics.MemStats.Alloc.Update(int64(memStats.Alloc))
 	runtimeMetrics.MemStats.BuckHashSys.Update(int64(memStats.BuckHashSys))
@@ -188,7 +186,6 @@ func registerRuntimeMemStats(r metrics.Registry) {
 	runtimeMetrics.NumGoroutine = metrics.NewGauge()
 	runtimeMetrics.NumThread = metrics.NewGauge()
 	runtimeMetrics.ReadMemStats = lft.NewLockFreeTimer()
-	runtimeMetrics.Uptime = metrics.GetOrRegisterGauge("go_service,version="+CodeVersion+" uptime", r)
 
 	_ = r.Register("go_runtime mem_stat_alloc",
 		runtimeMetrics.MemStats.Alloc)
