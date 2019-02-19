@@ -7,20 +7,116 @@ import (
 	"time"
 
 	"github.com/rcrowley/go-metrics"
+	"github.com/remerge/cue"
 )
 
-// HealthcheckState represents overall healthcheck state
-type HealthcheckState struct {
-	Version string
-	At      time.Time
-	Healthy bool
-	Checks  map[string]HealthcheckResult `json:",omitempty"`
-}
-
-// HealthcheckResult represents result of one registered healthcheck
-type HealthcheckResult struct {
+// CheckResult represents result of one registered healthcheck
+type CheckResult struct {
 	Age   time.Duration `json:",omitempty"` // Age of passed check. Zero if failed.
 	Error string        `json:",omitempty"` // Last error
+}
+
+// ChecksHandler wraps HandleChecks method which receives
+// results of all evaluated health checks.
+type ChecksHandler interface {
+	HandleChecks(time.Time, map[string]CheckResult)
+}
+
+// CueChecksHandler logs changed checks
+type CueChecksHandler struct {
+	state  map[string]string
+	logger cue.Logger
+}
+
+func NewCueChecksHandler(logger cue.Logger, version string) ChecksHandler {
+	return &CueChecksHandler{
+		state:  map[string]string{},
+		logger: logger.WithFields(cue.Fields{
+			"version": version,
+			"reason": "health",
+		}),
+	}
+}
+
+func (h *CueChecksHandler) HandleChecks(_ time.Time, checks map[string]CheckResult) {
+	for name, res := range checks {
+		last, ok := h.state[name]
+		if !ok {
+			last = "uninitialized"
+		}
+		if last != "" && res.Error == "" {
+			h.logger.WithFields(cue.Fields{
+				"code": name,
+				"last_error": last,
+			}).Info("pass")
+		}
+		if (last == "" || !ok) && res.Error != "" {
+			h.logger.WithFields(cue.Fields{
+				"code": name,
+				"error": res.Error,
+			}).Warn("fail")
+		}
+		h.state[name] = res.Error
+	}
+}
+
+// StateChecksHandler keeps all checks in internal state
+type StateChecksHandler struct {
+	version string
+	cache   map[string]interface{}
+}
+
+func NewStateChecksHandler(version string) *StateChecksHandler {
+	return &StateChecksHandler{
+		version: version,
+		cache: map[string]interface{}{
+			"at":      time.Now(),
+			"version": version,
+		},
+	}
+}
+
+func (c *StateChecksHandler) HandleChecks(at time.Time, checks map[string]CheckResult) {
+	c.cache = map[string]interface{}{
+		"at":      at,
+		"version": c.version,
+		"checks":  checks,
+	}
+}
+
+// State returns checks state
+func (c *StateChecksHandler) State() map[string]interface{} {
+	return c.cache
+}
+
+// GuardChecksHandler caches result of all required checks
+type GuardChecksHandler struct {
+	required []string
+	failed   uint32
+}
+
+func NewGuardChecksHandler(required ...string) *GuardChecksHandler {
+	return &GuardChecksHandler{
+		required: required,
+		failed:   1,
+	}
+}
+
+func (c *GuardChecksHandler) HandleChecks(_ time.Time, checks map[string]CheckResult) {
+	var v uint32
+	for _, name := range c.required {
+		res, ok := checks[name]
+		if !ok || res.Error != "" {
+			v = 1
+			break
+		}
+	}
+	atomic.StoreUint32(&c.failed, v)
+}
+
+// IsHealthy returns true if all required checks are passed
+func (c *GuardChecksHandler) IsHealthy() bool {
+	return atomic.LoadUint32(&c.failed) == 0
 }
 
 // HealthChecker wraps CheckHealth method to evaluate health check
@@ -40,11 +136,9 @@ type Healthcheck struct {
 	version         string
 	metricsRegistry metrics.Registry
 	interval        time.Duration
-	state           *HealthcheckState
+	checksHandlers  []ChecksHandler
 
-	failedChecks int32
-	at           int64
-	pool         sync.Map
+	pool sync.Map
 
 	running int32
 	closing int32
@@ -52,16 +146,13 @@ type Healthcheck struct {
 }
 
 // NewHealthcheck creates new Healthcheck
-func NewHealthcheck(version string, pollInterval time.Duration, registry metrics.Registry) (p *Healthcheck) {
+func NewHealthcheck(version string, pollInterval time.Duration, registry metrics.Registry, checksHandlers ...ChecksHandler) (p *Healthcheck) {
 	p = &Healthcheck{
 		version:         version,
 		metricsRegistry: registry,
 		interval:        pollInterval,
 		closeCh:         make(chan struct{}),
-		state: &HealthcheckState{
-			Version: version,
-			At:      time.Now(),
-		},
+		checksHandlers:  checksHandlers,
 	}
 	return p
 }
@@ -96,17 +187,6 @@ func (p *Healthcheck) Register(name string, handler HealthChecker) {
 	p.pool.LoadOrStore(name, newHealthcheckEvaluator(p.metricsRegistry, name, p.version, handler))
 }
 
-// IsHealthy returns true if all registered checks are passed.
-// Use to assert overall state inside service.
-func (p *Healthcheck) IsHealthy() bool {
-	return atomic.LoadInt32(&p.failedChecks) == 0
-}
-
-// State returns current state
-func (p *Healthcheck) State() (s HealthcheckState) {
-	return *p.state
-}
-
 func (p *Healthcheck) loop() {
 	ticker := time.NewTicker(p.interval)
 	defer ticker.Stop()
@@ -115,28 +195,19 @@ func (p *Healthcheck) loop() {
 		case <-p.closeCh:
 			return
 		case now := <-ticker.C:
-			var failed int32
-			newState := &HealthcheckState{
-				Version: p.version,
-				At:      now,
-				Checks:  map[string]HealthcheckResult{},
-			}
+			checks := map[string]CheckResult{}
 			p.pool.Range(func(key, value interface{}) bool {
 				e, ok := value.(*healthcheckEvaluator)
 				if !ok {
 					return true
 				}
 				result := e.evaluate(now)
-				if result.Error != "" {
-					failed++
-				}
-				newState.Checks[key.(string)] = result
+				checks[key.(string)] = result
 				return true
 			})
-			newState.Healthy = failed == 0
-			p.state = newState
-			atomic.StoreInt32(&p.failedChecks, failed)
-			atomic.StoreInt64(&p.at, now.UnixNano())
+			for _, rh := range p.checksHandlers {
+				rh.HandleChecks(now, checks)
+			}
 		}
 	}
 }
@@ -162,14 +233,14 @@ func newHealthcheckEvaluator(registry metrics.Registry, name, version string, ha
 	return e
 }
 
-func (e *healthcheckEvaluator) evaluate(now time.Time) (s HealthcheckResult) {
+func (e *healthcheckEvaluator) evaluate(now time.Time) (s CheckResult) {
 	if err := e.handler.CheckHealth(); err != nil {
 		if !e.failed {
 			e.since = now
 			e.failed = true
 		}
 		e.healthyDurationGauge.Update(0)
-		return HealthcheckResult{
+		return CheckResult{
 			Error: fmt.Sprint(err),
 		}
 	}
@@ -180,7 +251,7 @@ func (e *healthcheckEvaluator) evaluate(now time.Time) (s HealthcheckResult) {
 
 	age := now.Sub(e.since)
 	e.healthyDurationGauge.Update(int64(age))
-	return HealthcheckResult{
+	return CheckResult{
 		Age: age,
 	}
 }
