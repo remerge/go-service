@@ -20,7 +20,7 @@ const (
 // feeding data to incoming connections.
 type DebugForwarder struct {
 	Port int
-	log  *Logger
+	log  cue.Logger
 
 	listener  net.Listener
 	conns     sync.Map
@@ -34,7 +34,7 @@ type DebugForwarder struct {
 	connCloseCounter  metrics.Counter
 }
 
-func NewDebugForwarder(logger *Logger, metricsRegistry metrics.Registry, port int) (f *DebugForwarder, err error) {
+func NewDebugForwarder(logger cue.Logger, metricsRegistry metrics.Registry, port int) (f *DebugForwarder, err error) {
 	f = &DebugForwarder{
 		log:               logger,
 		Port:              port,
