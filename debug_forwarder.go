@@ -80,8 +80,9 @@ func NewDebugForwarder(logger *Logger, metricsRegistry metrics.Registry, port in
 
 func (f *DebugForwarder) Close() error {
 	if f == nil || !atomic.CompareAndSwapUint32(&f.closing, 0, 1) {
-		_ = f.listener.Close()
+		return nil
 	}
+	_ = f.listener.Close()
 	f.conns.Range(func(k, v interface{}) bool {
 		c := v.(net.Conn)
 		_ = c.Close()
