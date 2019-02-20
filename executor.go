@@ -42,8 +42,6 @@ type Executor struct {
 	Tracker *tracker
 	Server  *server
 
-	*debugForwader
-
 	metricsRegistry metrics.Registry
 	promMetrics     *PrometheusMetrics
 
