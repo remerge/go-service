@@ -30,10 +30,10 @@ type CueChecksHandler struct {
 
 func NewCueChecksHandler(logger cue.Logger, version string) ChecksHandler {
 	return &CueChecksHandler{
-		state:  map[string]string{},
+		state: map[string]string{},
 		logger: logger.WithFields(cue.Fields{
 			"version": version,
-			"reason": "health",
+			"reason":  "health",
 		}),
 	}
 }
@@ -46,13 +46,13 @@ func (h *CueChecksHandler) HandleChecks(_ time.Time, checks map[string]CheckResu
 		}
 		if last != "" && res.Error == "" {
 			h.logger.WithFields(cue.Fields{
-				"code": name,
+				"code":       name,
 				"last_error": last,
 			}).Info("pass")
 		}
 		if (last == "" || !ok) && res.Error != "" {
 			h.logger.WithFields(cue.Fields{
-				"code": name,
+				"code":  name,
 				"error": res.Error,
 			}).Warn("fail")
 		}

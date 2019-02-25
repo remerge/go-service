@@ -64,7 +64,7 @@ func NewDebugForwarder(logger cue.Logger, metricsRegistry metrics.Registry, port
 				break
 			}
 
-			if debugForwarderMaxConn > atomic.LoadUint32(&f.connCount) {
+			if debugForwarderMaxConn < atomic.LoadUint32(&f.connCount) {
 				f.log.WithFields(cue.Fields{"remote_addr": conn.RemoteAddr().String()}).Warnf("dropping conn: max reached")
 				_, _ = conn.Write([]byte("max conn reached\n"))
 				_ = conn.Close()
