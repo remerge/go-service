@@ -34,6 +34,19 @@ type DebugForwarder struct {
 	connCloseCounter  metrics.Counter
 }
 
+type connection struct {
+	net.Conn
+	f     *DebugForwarder
+	guard uint32
+}
+
+func (c *connection) Close() error {
+	if atomic.CompareAndSwapUint32(&c.guard, 0, 1) {
+		atomic.AddUint32(&c.f.connCount, ^uint32(0))
+		c.f.connCloseCounter.Inc(1)
+	}
+	return c.Conn.Close()
+}
 func NewDebugForwarder(logger cue.Logger, metricsRegistry metrics.Registry, port int) (f *DebugForwarder, err error) {
 	f = &DebugForwarder{
 		log:               logger,
@@ -71,7 +84,7 @@ func NewDebugForwarder(logger cue.Logger, metricsRegistry metrics.Registry, port
 				continue
 			}
 			atomic.AddUint32(&f.connCount, 1)
-			f.conns.Store(conn.RemoteAddr().String(), conn)
+			f.conns.Store(conn.RemoteAddr().String(), connection{Conn: conn, f: f})
 			f.connAcceptCounter.Inc(1)
 		}
 	}(f.listener)
@@ -84,7 +97,7 @@ func (f *DebugForwarder) Close() error {
 	}
 	_ = f.listener.Close()
 	f.conns.Range(func(k, v interface{}) bool {
-		c := v.(net.Conn)
+		c := v.(connection)
 		_ = c.Close()
 		return true
 	})
@@ -107,8 +120,8 @@ func (f *DebugForwarder) Write(data []byte) (n int, err error) {
 	}
 
 	f.conns.Range(func(k, v interface{}) bool {
-		c := v.(net.Conn)
-		go func(k interface{}, c net.Conn, d []byte) {
+		c := v.(connection)
+		go func(k interface{}, c connection, d []byte) {
 			var badConn bool
 			if setErr := c.SetWriteDeadline(time.Now().Add(debugForwarderWriteTimeout)); setErr != nil {
 				badConn = true
@@ -124,8 +137,7 @@ func (f *DebugForwarder) Write(data []byte) (n int, err error) {
 			}
 			if badConn {
 				f.conns.Delete(k)
-				atomic.AddUint32(&f.connCount, ^uint32(0))
-				f.connCloseCounter.Inc(1)
+				_ = c.Close()
 			}
 
 		}(k, c, data)
