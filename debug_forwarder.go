@@ -121,7 +121,7 @@ func (f *DebugForwarder) Write(data []byte) (n int, err error) {
 
 	f.conns.Range(func(k, v interface{}) bool {
 		c := v.(connection)
-		go func(k interface{}, c connection, d []byte) {
+		go func(k interface{}, c *connection, d []byte) {
 			var badConn bool
 			if setErr := c.SetWriteDeadline(time.Now().Add(debugForwarderWriteTimeout)); setErr != nil {
 				badConn = true
@@ -140,7 +140,7 @@ func (f *DebugForwarder) Write(data []byte) (n int, err error) {
 				_ = c.Close()
 			}
 
-		}(k, c, data)
+		}(k, &c, data)
 		return true
 	})
 	return len(data), nil
