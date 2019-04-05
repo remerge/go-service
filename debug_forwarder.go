@@ -84,7 +84,7 @@ func NewDebugForwarder(logger cue.Logger, metricsRegistry metrics.Registry, port
 				continue
 			}
 			atomic.AddUint32(&f.connCount, 1)
-			f.conns.Store(conn.RemoteAddr().String(), connection{Conn: conn, f: f})
+			f.conns.Store(conn.RemoteAddr().String(), &connection{Conn: conn, f: f})
 			f.connAcceptCounter.Inc(1)
 		}
 	}(f.listener)
@@ -97,7 +97,7 @@ func (f *DebugForwarder) Close() error {
 	}
 	_ = f.listener.Close()
 	f.conns.Range(func(k, v interface{}) bool {
-		c := v.(connection)
+		c := v.(*connection)
 		_ = c.Close()
 		return true
 	})
@@ -120,7 +120,7 @@ func (f *DebugForwarder) Write(data []byte) (n int, err error) {
 	}
 
 	f.conns.Range(func(k, v interface{}) bool {
-		c := v.(connection)
+		c := v.(*connection)
 		go func(k interface{}, c *connection, d []byte) {
 			var badConn bool
 			if setErr := c.SetWriteDeadline(time.Now().Add(debugForwarderWriteTimeout)); setErr != nil {
@@ -140,7 +140,7 @@ func (f *DebugForwarder) Write(data []byte) (n int, err error) {
 				_ = c.Close()
 			}
 
-		}(k, &c, data)
+		}(k, c, data)
 		return true
 	})
 	return len(data), nil
