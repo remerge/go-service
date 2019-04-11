@@ -23,6 +23,7 @@ import (
 // - a debug server (if requested, serves prometeus metrics)
 // - a debug forwarder (if requested)
 // - a rollbar instance (sends logged Errors to rollbar in production mode)
+// - a stackdriver connection to colelct ongoing profiles (if requested)
 //
 // On startup Base checks if the previous shutdown was graceful.
 type Base struct {
@@ -39,15 +40,16 @@ type Base struct {
 	debugForwader *debugForwader
 	stackdriver   *stackdriver
 
-	metricsRegistry metrics.Registry
+	metricsRegistry *lft.Registry
 	promMetrics     *PrometheusMetrics
 	closeChannel    chan struct{}
 }
 
 // RegisterBase registers a Base ctor with a given DI registry. Additonal it registers
-// the ctors for logger, metrics, debug forwarder, tracker, http server and debug http server.
+// the ctors for logger, metrics, debug forwarder, tracker, http server, stackdriver and debug http server.
 func RegisterBase(r Registry, name string) {
 	r.Register(func(cmd *cobra.Command) (*Base, error) {
+
 		metricsRegistry := lft.DefaultRegistry
 		base := &Base{
 			Name:            name,
@@ -56,6 +58,13 @@ func RegisterBase(r Registry, name string) {
 			promMetrics:     NewPrometheusMetrics(metricsRegistry, name),
 			closeChannel:    make(chan struct{}),
 		}
+
+		// until we correctly register metrics with the correct registry everywhere, sync
+		go func() {
+			for range time.NewTicker(time.Second * 30).C {
+				lft.DefaultRegistry.PullFrom(metrics.DefaultRegistry)
+			}
+		}()
 
 		base.configureFlags(cmd)
 
@@ -159,13 +168,6 @@ func (b *Base) Shutdown(sig os.Signal) {
 
 	b.Log.Info("shutdown done")
 }
-
-// // WithMetricsRegistry replaces default metrics registry.
-// // This method should be called ONCE BEFORE adding other services to the Runner with WithXYZ or direct service registry request
-// func (e *Runner) WithMetricsRegistry(r metrics.Registry) *Runner {
-// 	e.metricsRegistry = r
-// 	return e
-// }
 
 // CreateTracker creates a tracker object for this Base
 func (b *Base) CreateTracker(r *RunnerWithRegistry) {

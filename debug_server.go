@@ -20,8 +20,10 @@ import (
 // debugServer provides:
 // - /meta for service metadata
 // - /pprof for go profiling
+// - /blockprof to configure the rate for conntention profiling
 // - /metrics for prometehus metrics
 // - /panic to trigger a panic ;-)
+
 type debugServer struct {
 	*Server
 	metricsRegistry  metrics.Registry
