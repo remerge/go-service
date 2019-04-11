@@ -2,7 +2,6 @@ package service
 
 import (
 	"fmt"
-	"runtime/debug"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -35,7 +34,6 @@ func ginRecovery(name string) gin.HandlerFunc {
 					_ = c.Error(fmt.Errorf("unknown error: %v", err))
 				}
 			}
-			debug.PrintStack()
 
 			if len(c.Errors) == 0 {
 				return

@@ -120,9 +120,7 @@ func (b *Base) Init() error {
 	}
 
 	// flush prom metrics every 10s
-	if env.IsProd() {
-		go b.runMetricsFlusher(10*time.Second, b.closeChannel)
-	}
+	go b.runMetricsFlusher(10*time.Second, b.closeChannel)
 
 	// create cache folder if missing #nosec
 	err := os.MkdirAll("cache", 0755)
