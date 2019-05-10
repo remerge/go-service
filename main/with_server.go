@@ -32,12 +32,12 @@ func (s *SimpleServer) Run() error {
 }
 
 // ServeHTTP
-func (s *SimpleServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (s *SimpleServer) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
 	message := "Hello there"
 	w.Write([]byte(message))
 }
 
 // Shutdown
-func (s *SimpleServer) Shutdown(sig os.Signal) {
+func (s *SimpleServer) Shutdown(_ os.Signal) {
 	s.Log.Info("Shutdown...")
 }
