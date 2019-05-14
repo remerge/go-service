@@ -78,7 +78,7 @@ func captureRuntimeMemStats(d time.Duration, closeChan <-chan struct{}) {
 // Be very careful with this because runtime.ReadMemStats calls the C functions
 // runtime·semacquire(&runtime·worldsema) and runtime·stoptheworld() and that
 // last one does what it says on the tin.
-func captureRuntimeMemStatsOnce(startTime time.Time) {
+func captureRuntimeMemStatsOnce(_ time.Time) {
 	t := time.Now()
 	runtime.ReadMemStats(&memStats) // This takes 50-200us.
 	runtimeMetrics.ReadMemStats.UpdateSince(t)

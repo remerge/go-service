@@ -37,7 +37,7 @@ func (s *lockingService) Run() error {
 	return nil
 }
 
-func (s *lockingService) Shutdown(sig os.Signal) {
+func (s *lockingService) Shutdown(_ os.Signal) {
 	s.shutdownCount++
 	time.Sleep(time.Second)
 }
