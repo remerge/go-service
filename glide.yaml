@@ -1,0 +1,17 @@
+package: github.com/remerge/go-service
+import:
+- package: github.com/gin-gonic/gin
+- package: github.com/rcrowley/go-metrics
+  subpackages:
+  - exp
+- package: github.com/spf13/cobra
+- package: github.com/tylerb/graceful
+- package: github.com/remerge/cue
+- package: github.com/remerge/go-lock_free_timer
+- package: github.com/cenkalti/backoff
+- package: cloud.google.com/go
+  version: ^0.34.0
+  subpackages:
+  - profiler
+testImport:
+- package: github.com/stretchr/testify

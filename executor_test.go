@@ -35,7 +35,7 @@ func (s *testService) Run() error {
 	return s.runError
 }
 
-func (s *testService) Shutdown(_ os.Signal) {
+func (s *testService) Shutdown(sig os.Signal) {
 	s.shutdownCalled = true
 }
 

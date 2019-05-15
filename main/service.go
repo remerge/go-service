@@ -27,7 +27,7 @@ func (s *SimpleService) Run() error {
 	return nil
 }
 
-func (s *SimpleService) Shutdown(_ os.Signal) {
+func (s *SimpleService) Shutdown(sig os.Signal) {
 	s.Log.Info("Shutdown...")
 }
 
