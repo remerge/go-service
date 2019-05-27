@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -131,14 +132,39 @@ func (*NilHealthChecker) CheckHealth() error {
 	return nil
 }
 
+// PauseHealthChecker returns error in paused state
+type PauseHealthChecker struct {
+	paused int32
+}
+
+func NewPauseHealthChecker() *PauseHealthChecker {
+	return &PauseHealthChecker{}
+}
+
+func (c *PauseHealthChecker) CheckHealth() error {
+	if atomic.LoadInt32(&c.paused) == 1 {
+		return errors.New("paused")
+	}
+	return nil
+}
+
+func (c *PauseHealthChecker) Pause() {
+	atomic.StoreInt32(&c.paused, 1)
+}
+
+func (c *PauseHealthChecker) Resume() {
+	atomic.StoreInt32(&c.paused, 0)
+}
+
 // Healthcheck holds and evaluates registered healthchecks
 type Healthcheck struct {
 	version         string
 	metricsRegistry metrics.Registry
 	interval        time.Duration
-	checksHandlers  []ChecksHandler
 
-	pool sync.Map
+	mu             sync.Mutex
+	checks         map[string]*healthcheckEvaluator
+	checksHandlers []ChecksHandler
 
 	running int32
 	closing int32
@@ -146,69 +172,83 @@ type Healthcheck struct {
 }
 
 // NewHealthcheck creates new Healthcheck
-func NewHealthcheck(version string, pollInterval time.Duration, registry metrics.Registry, checksHandlers ...ChecksHandler) (p *Healthcheck) {
-	p = &Healthcheck{
+func NewHealthcheck(version string, pollInterval time.Duration, registry metrics.Registry, checksHandlers ...ChecksHandler) (h *Healthcheck) {
+	h = &Healthcheck{
 		version:         version,
 		metricsRegistry: registry,
 		interval:        pollInterval,
 		closeCh:         make(chan struct{}),
+		checks:          map[string]*healthcheckEvaluator{},
 		checksHandlers:  checksHandlers,
 	}
-	return p
+	h.Register("uptime", &NilHealthChecker{})
+	return h
 }
 
 // Run starts healthcheck loop.
 // This method can be safely called multiple times.
-func (p *Healthcheck) Run() {
-	if atomic.LoadInt32(&p.closing) == 1 || atomic.LoadInt32(&p.running) == 1 {
+func (h *Healthcheck) Run() {
+	if atomic.LoadInt32(&h.closing) == 1 || atomic.LoadInt32(&h.running) == 1 {
 		return
 	}
-	if atomic.CompareAndSwapInt32(&p.running, 0, 1) {
-		p.Register("uptime", &NilHealthChecker{})
-		go p.loop()
+	if atomic.CompareAndSwapInt32(&h.running, 0, 1) {
+		go h.loop()
 	}
+}
+
+// Update reevaluates all checks
+func (h *Healthcheck) Update() {
+	if atomic.LoadInt32(&h.closing) == 1 {
+		return
+	}
+	h.evaluate(time.Now())
 }
 
 // Close stops healthcheck loop and prevents any further registrations.
 // This method can be safely called multiple times.
-func (p *Healthcheck) Close() error {
-	if atomic.CompareAndSwapInt32(&p.closing, 0, 1) {
-		close(p.closeCh)
+func (h *Healthcheck) Close() error {
+	if atomic.CompareAndSwapInt32(&h.closing, 0, 1) {
+		close(h.closeCh)
 	}
-	<-p.closeCh
+	<-h.closeCh
 	return nil
 }
 
 // Register registers new healthcheck with given name if it not registered yet
-func (p *Healthcheck) Register(name string, handler HealthChecker) {
-	if atomic.LoadInt32(&p.closing) == 1 {
+func (h *Healthcheck) Register(name string, handler HealthChecker) {
+	if atomic.LoadInt32(&h.closing) == 1 {
 		return
 	}
-	p.pool.LoadOrStore(name, newHealthcheckEvaluator(p.metricsRegistry, name, p.version, handler))
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if _, ok := h.checks[name]; !ok {
+		h.checks[name] = newHealthcheckEvaluator(h.metricsRegistry, name, h.version, handler)
+	}
 }
 
-func (p *Healthcheck) loop() {
-	ticker := time.NewTicker(p.interval)
+func (h *Healthcheck) loop() {
+	ticker := time.NewTicker(h.interval)
 	defer ticker.Stop()
 	for {
 		select {
-		case <-p.closeCh:
+		case <-h.closeCh:
 			return
 		case now := <-ticker.C:
-			checks := map[string]CheckResult{}
-			p.pool.Range(func(key, value interface{}) bool {
-				e, ok := value.(*healthcheckEvaluator)
-				if !ok {
-					return true
-				}
-				result := e.evaluate(now)
-				checks[key.(string)] = result
-				return true
-			})
-			for _, rh := range p.checksHandlers {
-				rh.HandleChecks(now, checks)
-			}
+			h.evaluate(now)
 		}
+	}
+}
+
+func (h *Healthcheck) evaluate(now time.Time) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	checks := map[string]CheckResult{}
+	for name, evaluator := range h.checks {
+		checks[name] = evaluator.evaluate(now)
+	}
+	for _, rh := range h.checksHandlers {
+		rh.HandleChecks(now, checks)
 	}
 }
 
