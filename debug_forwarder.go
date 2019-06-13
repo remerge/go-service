@@ -14,6 +14,8 @@ import (
 	"github.com/remerge/go-service/registry"
 )
 
+const debugForwarderMaxConn = 64
+
 type DebugForwaderConfig struct {
 	Port int
 }
@@ -90,6 +92,13 @@ func (f *debugForwader) Init() error {
 					}
 					f.log.Error(err, "failed to accept debug listener connection, terminate loop")
 					return
+				}
+				connCount := atomic.LoadUint32(&f.connCount)
+				if debugForwarderMaxConn <= connCount {
+					f.log.WithFields(cue.Fields{"remote_addr": c.RemoteAddr().String(), "connections": connCount}).Warnf("max debug connections reached, dropping new connection")
+					_, _ = c.Write([]byte(fmt.Sprintf("max debug connections reached (%d)\n", connCount)))
+					_ = c.Close()
+					break
 				}
 				f.log.WithFields(cue.Fields{"remote_addr": c.RemoteAddr().String()}).Info("debug connection opened")
 				atomic.AddUint32(&f.connCount, 1)
