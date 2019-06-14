@@ -10,6 +10,9 @@ cache:
   - $GOPATH/bin
   - $HOME/.cache/go-build
 
+before_install:
+  - docker-compose up -d  
+
 branches:
   only:
     - master
