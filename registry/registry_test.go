@@ -266,10 +266,10 @@ type _testStruct4 struct{ InnerStruct }
 
 func TestCreateParamStruct(t *testing.T) {
 	for _, e := range []*testEntry{
-		&testEntry{[]interface{}{123}, &_testStruct1{A: 123}},
-		&testEntry{[]interface{}{123, "test"}, &_testStruct2{A: 123, B: "test"}},
-		&testEntry{[]interface{}{_innerStruct{123}}, &_testStruct3{I: _innerStruct{123}}},
-		&testEntry{[]interface{}{InnerStruct{123}}, &_testStruct4{InnerStruct{123}}},
+		{[]interface{}{123}, &_testStruct1{A: 123}},
+		{[]interface{}{123, "test"}, &_testStruct2{A: 123, B: "test"}},
+		{[]interface{}{_innerStruct{123}}, &_testStruct3{I: _innerStruct{123}}},
+		{[]interface{}{InnerStruct{123}}, &_testStruct4{InnerStruct{123}}},
 	} {
 		var vv []reflect.Value
 		for _, v := range e.values {
