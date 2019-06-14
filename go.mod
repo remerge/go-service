@@ -8,7 +8,6 @@ require (
 	github.com/Shopify/sarama v0.0.0-20180507145726-3c763ff04e6d
 	github.com/Shopify/toxiproxy v2.1.4+incompatible // indirect
 	github.com/cenkalti/backoff v0.0.0-20180518090649-f756bc9a37f8
-	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/docker/docker v1.13.1 // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
@@ -28,8 +27,7 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v0.0.0-20180511053014-58118c1ea916 // indirect
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
-	github.com/pierrec/lz4 v0.0.0-20180113151703-ed8d4cc3b461 // indirect
-	github.com/pierrec/xxHash v0.0.0-20170714082455-a0006b13c722 // indirect
+	github.com/pierrec/lz4 v0.0.0-20190501090746-d705d4371bfc // indirect
 	github.com/pkg/errors v0.8.1 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20180503174638-e2704e165165
 	github.com/remerge/cue v0.0.0-20180404154012-5ce627d813ef
