@@ -1,21 +1,22 @@
 sudo: false
 language: go
+
 go:
-- 1.11
+- "1.11"
 
 cache:
   directories:
-  - vendor
+  - $GOPATH/pkg/mod
+  - $GOPATH/bin
+  - $HOME/.cache/go-build
 
-before_install:
-  - docker-compose up -d
-
-install:
-- make dep
+branches:
+  only:
+    - master
 
 script:
-- make test clean
+- make lint test
 
 notifications:
   slack:
-    secure: WeZ4gavTR5z8N19dHD4I20pYwz9HRBDpYyjMIiaCC26HsgqdkZdNrdNHZxTthTIupvk9DRo6qVE0/WcCnJ661WM3NaXagaMWbuu2SfMEap2BdBD+xSN48osFaeb0V46sVofkrEPlN9sc5kqEQATjFavu4gZLG5zaIeqrRdG8NxF2AZj1V/yeC/lGHz++Mbhu5vJCnK4XhIyb6inwSVYOtFM7nMTnN6K1hbBDouz1L9HKNu2vhpsG+fkDqKy6Dpl4hPqIfiW4naEPKv8zVu5oWVqSCMHki9K+72fpj9MVzgYpWqSrFUG45xQ6yQuFTzkBIim/X+pjoxDDlSDZL22ArNsh6ALMtG/XTLUb/0teHzKDBh9InBgbukwPOjvaKmqmvnogqKO3B8Hb4VsJyn1/w5cWOoKozkFGYHrTqD3GVLcLteQ9rVuDwU7usgvdtStXb+wdAVLzK2Jp8rcFkARDXr98PehdWH+fpm2iltiZU0jttlyZdikCQNzr1L3k2NAhlLMEWvpwBH3gCILkTo2AK2jELON+ZJoyOj+Z4JrK3WW1k3otsnxc7TWcw9O93BrKvJFzwzYC+dLCkdhah4TuBXhvOgtt4UDmAjpv+3u4CznQ3LGE1azL810YQcb4NUs6SmCFaCwT3ebixj6cYaqNKtMapUIUK3ulCRyIekPVixo=
+    secure: JTOQ25Dh3Xoh3p9hbXsC+hhMP6XmYftjZjErrweX9fcRjJ7/vOmQ9md3Kg0ekweeiEh7ALJLLTnaV8rLO0AIhjYntAEMvRWprWF/cQGBeig1CoJgkoWGPn4dKULw1ONcw3LLhUxJeL6NImEuZA4d/lMeJx28jIdtU3s5jLJKkJI=
