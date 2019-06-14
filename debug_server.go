@@ -26,9 +26,11 @@ import (
 
 type debugServer struct {
 	*Server
-	metricsRegistry  metrics.Registry
-	promMetrics      *PrometheusMetrics
-	serviceStartTime time.Time
+	metricsRegistry   metrics.Registry
+	promMetrics       *PrometheusMetrics
+	serviceStartTime  time.Time
+	healthReportCache *HealthReportCache
+	healthChecker     *HealthChecker
 }
 
 type debugServerParams struct {
@@ -38,6 +40,7 @@ type debugServerParams struct {
 	Cmd             *cobra.Command
 	MetricsRegistry metrics.Registry
 	PromMetrics     *PrometheusMetrics
+	HealthChecker   *HealthChecker
 }
 
 type DebugEngine struct {
@@ -54,9 +57,12 @@ func registerDebugServer(r Registry, name string) {
 				ShutdownTimeout:   30 * time.Second,
 				ConnectionTimeout: 5 * time.Minute,
 			},
-			metricsRegistry: p.MetricsRegistry,
-			promMetrics:     p.PromMetrics,
+			metricsRegistry:   p.MetricsRegistry,
+			promMetrics:       p.PromMetrics,
+			healthChecker:     p.HealthChecker,
+			healthReportCache: NewHealthReportCache(CodeVersion),
 		}
+		f.healthChecker.AddListener(f.healthReportCache)
 		f.configureFlags(p.Cmd)
 		return f, nil
 	})
@@ -112,7 +118,17 @@ func (s *debugServer) serveDebug() {
 			return
 		}
 		runtime.SetBlockProfileRate(r)
-		c.String(http.StatusOK, "new rate %d", r)
+		c.String(http.StatusOK, "new block profile rate %d", r)
+	})
+
+	s.Engine.GET("/mutexprof/:rate", func(c *gin.Context) {
+		r, err := strconv.Atoi(c.Param("rate"))
+		if err != nil {
+			_ = c.Error(err)
+			return
+		}
+		runtime.SetMutexProfileFraction(r)
+		c.String(http.StatusOK, "new mutex profile rate %d", r)
 	})
 
 	s.Engine.GET("/panic", func(c *gin.Context) {
@@ -130,6 +146,11 @@ func (s *debugServer) serveDebug() {
 			"version": CodeVersion,
 			"uptime":  int64(time.Now().Sub(s.serviceStartTime)),
 		})
+	})
+
+	s.Engine.GET("/healthcheck", func(c *gin.Context) {
+		s.healthChecker.Update() // force an update
+		c.JSON(200, s.healthReportCache.State())
 	})
 
 	s.log.WithFields(cue.Fields{

@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -9,6 +10,12 @@ import (
 	"github.com/rcrowley/go-metrics"
 	"github.com/remerge/cue"
 )
+
+func registerHealthChecker(r Registry) {
+	r.Register(func(mr metrics.Registry) (*HealthChecker, error) {
+		return NewHealthChecker(CodeVersion, time.Second*15, mr, NewHealthReportLogger(cue.NewLogger("health"), CodeVersion)), nil
+	})
+}
 
 // HealthCheckable is a subject which's health can be checked
 type HealthCheckable interface {
@@ -58,10 +65,26 @@ func NewHealthChecker(version string, pollInterval time.Duration, registry metri
 		interval:        pollInterval,
 		closeCh:         make(chan struct{}),
 		listeners:       listeners,
+		evaluators:      make(map[string]*healthcheckEvaluator),
 	}
 	// hack - a check called uptime that is always healthy
 	h.AddCheck("uptime", CheckHealth(func() (bool, error) { return true, nil }))
 	return h
+}
+
+func (h *HealthChecker) AddListener(l HealthReportListener) {
+	h.listeners = append(h.listeners, l)
+}
+
+// temp to comply with service interface
+func (h *HealthChecker) Init() error {
+	h.Run()
+	return nil
+}
+
+// temp to comply with service interface
+func (h *HealthChecker) Shutdown(os.Signal) {
+	h.Close()
 }
 
 // Run starts healthcheck loop.

@@ -39,6 +39,7 @@ type Base struct {
 	DebugServer   *debugServer
 	debugForwader *debugForwader
 	stackdriver   *stackdriver
+	HealthChecker *HealthChecker
 
 	metricsRegistry *lft.Registry
 	promMetrics     *PrometheusMetrics
@@ -81,6 +82,7 @@ func RegisterBase(r Registry, name string) {
 		})
 
 		registerDebugForwarder(r)
+		registerHealthChecker(r)
 		registerTracker(r, name)
 		registerServer(r, name)
 		registerDebugServer(r, name)
@@ -190,6 +192,11 @@ func (b *Base) CreateDebugForwarder(r *RunnerWithRegistry, port int) {
 // CreateStackdriver create a stackdriver service
 func (b *Base) CreateStackdriver(r *RunnerWithRegistry) {
 	r.Create(&b.stackdriver)
+}
+
+// CreateHealthChecker create a healthChecker
+func (b *Base) CreateHealthChecker(r *RunnerWithRegistry) {
+	r.Create(&b.HealthChecker)
 }
 
 // ForwardToDebugConns forwards data to connected debug listeners
