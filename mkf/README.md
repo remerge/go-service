@@ -26,6 +26,22 @@ make dist
 
 For a specific OS/architecture the hidden target `.build/<app>.<os>.<arch>` can be used.
 
+## Go versions
+
+One of easiest ways to use multiple Go versions is [golang.org/dl](https://github.com/golang/dl):
+
+```
+GO111MODULE=off go get golang.org/dl/go1.11.6
+go1.11.6 download
+PATH=$HOME/sdk/go1.11.6/bin make lint test
+```
+
+Go version is not counted by Make targets. Use `make clean` to ensure that 
+artifacts are built against correct version.
+
+```
+make clean && PATH=$HOME/sdk/go1.11.6/bin make lint test
+```
 
 # Generating artifacts
 

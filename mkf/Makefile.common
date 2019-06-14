@@ -103,7 +103,7 @@ lint:: .lint-mod-tidy .lint-fmt .lint-vet .lint-revive .lint-fix ## run all lint
 .NOTPARALLEL: .lint-vet
 
 REVIVE_CONFIG = $(or $(wildcard revive.toml),$(MKF_PREFIX)/revive.toml)
-.lint-revive: $(TOOLS)/github.com/remerge/revive $(GO_SOURCES) $(REVIVE_CONFIG)	## run revive linter
+.lint-revive: $(TOOLS)/github.com/mgechev/revive $(GO_SOURCES) $(REVIVE_CONFIG)	## run revive linter
 	$< -config $(REVIVE_CONFIG) -formatter friendly -exclude ./vendor/... $(REVIVELINTER_EXCLUDES) ./...
 
 .lint-fix: $(GO_SOURCES) ## run fix
