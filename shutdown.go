@@ -30,12 +30,12 @@ func waitForShutdown(log cue.Logger, handler shutdownFunc, done chan struct{}) {
 		syscall.SIGTERM,
 	)
 
-	var signal os.Signal
+	var s os.Signal
 	select {
 	case sig := <-signalChannel:
-		signal = sig
+		s = sig
 	case <-done:
-		signal = syscall.SIGQUIT
+		s = syscall.SIGQUIT
 	}
 
 	ebo := backoff.NewExponentialBackOff()
@@ -50,7 +50,7 @@ func waitForShutdown(log cue.Logger, handler shutdownFunc, done chan struct{}) {
 	}()
 
 	if handler != nil {
-		handler(signal)
+		handler(s)
 	}
 }
 

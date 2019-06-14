@@ -6,5 +6,5 @@ import "os"
 type Service interface {
 	Init() error
 	Run() error
-	Shutdown(sig os.Signal)
+	Shutdown(os.Signal)
 }
