@@ -8,6 +8,10 @@ import (
 	"github.com/remerge/cue"
 )
 
+type Registrar interface {
+	Register(ctor interface{}) (func(...interface{}) (interface{}, error), error)
+}
+
 // Registry is used to register service  constructors and instantiate the services.
 // It provides a tools for dependency inject based service composition.
 type Registry struct {
