@@ -12,13 +12,13 @@ import (
 
 // HealthCheckable is a subject which's health can be checked
 type HealthCheckable interface {
-	Healthy() (bool, error)
+	Healthy() error
 }
 
 // CheckHealth can be used to wrap functions so they fulfill the HealthCheckable interface
-type CheckHealth func() (bool, error)
+type CheckHealth func() error
 
-func (f CheckHealth) Healthy() (bool, error) { return f() }
+func (f CheckHealth) Healthy() error { return f() }
 
 type HealthReport map[string]HealthCheckResult
 
@@ -61,7 +61,7 @@ func NewHealthChecker(version string, pollInterval time.Duration, registry metri
 		evaluators:      make(map[string]*healthcheckEvaluator),
 	}
 	// hack - a check called uptime that is always healthy
-	h.AddCheck("uptime", CheckHealth(func() (bool, error) { return true, nil }))
+	h.AddCheck("uptime", CheckHealth(func() error { return nil }))
 	return h
 }
 
@@ -158,7 +158,7 @@ func newHealthcheckEvaluator(registry metrics.Registry, name, version string, ch
 }
 
 func (e *healthcheckEvaluator) evaluate(now time.Time) (s HealthCheckResult) {
-	if healthy, err := e.checkable.Healthy(); !healthy {
+	if err := e.checkable.Healthy(); err != nil {
 		if !e.failed {
 			e.healthySince = now
 			e.failed = true
