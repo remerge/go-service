@@ -187,6 +187,10 @@ func TestServiceRegistry(t *testing.T) {
 			SomeNestedParameter
 		}
 
+		type InstantiationTimeParamsForD struct {
+			Int int
+		}
+
 		type RequiredByB struct {
 			Params
 			InstantiationTimeParamsForB `registry:"lazy"`
@@ -199,21 +203,38 @@ func TestServiceRegistry(t *testing.T) {
 			B                           *B
 		}
 
+		type D struct {
+			*C
+			Optional *InstantiationTimeParamsForD
+		}
+
+		type RequiredByD struct {
+			Params
+			*InstantiationTimeParamsForD `registry:"lazy,allownil"`
+			C                            *C
+		}
+
 		assert.NoError(t, register(r, func() (*A, error) { return &A{}, nil }))
 		assert.NoError(t, register(r, func(p *RequiredByB) (*B, error) { return &B{A: p.A, Int: p.Int, String: p.String}, nil }))
 		assert.NoError(t, register(r, func(p *RequiredByC) (*C, error) {
 			return &C{B: p.B, Float: p.InstantiationTimeParamsForC.SomeNestedParameter.Float}, nil
 		}))
 
-		type Target struct{ *C }
+		assert.NoError(t, register(r, func(p *RequiredByD) (*D, error) {
+			return &D{C: p.C, Optional: p.InstantiationTimeParamsForD}, nil
+		}))
+
+		type Target struct{ *D }
 		target := &Target{}
 
-		assert.NoError(t, r.RequestAndSet(&target.C, InstantiationTimeParamsForC{SomeNestedParameter{1.23}}, InstantiationTimeParamsForB{42, "hallo"}))
-		require.NotNil(t, target.C.B)
-		require.NotNil(t, target.C.B.A)
-		require.Equal(t, target.C.B.String, "hallo")
-		require.Equal(t, target.C.B.Int, 42)
-		require.Equal(t, target.C.Float, 1.23)
+		assert.NoError(t, r.RequestAndSet(&target.D, InstantiationTimeParamsForC{SomeNestedParameter{1.23}}, InstantiationTimeParamsForB{42, "hallo"}))
+		require.NotNil(t, target.D.C)
+		require.Nil(t, target.D.Optional)
+		require.NotNil(t, target.D.C.B)
+		require.NotNil(t, target.D.C.B.A)
+		require.Equal(t, target.D.C.B.String, "hallo")
+		require.Equal(t, target.D.C.B.Int, 42)
+		require.Equal(t, target.D.C.Float, 1.23)
 		// assert.NoError(t, r.RequestAndSet(&target.B, InstantiationTimeParamsForB{42, "hallo"}))
 		// require.NotNil(t, target.B)
 		// require.NotNil(t, target.B.A)

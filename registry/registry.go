@@ -4,6 +4,7 @@ import (
 	"container/list"
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/remerge/cue"
 )
@@ -79,8 +80,7 @@ func (r *Registry) Register(ctor interface{}) (func(...interface{}) (interface{}
 		}
 		for i := 0; i < pt.NumField(); i++ {
 			f := pt.Field(i)
-			v, _ := f.Tag.Lookup("registry")
-			isLazyParam := v == "lazy"
+			isLazyParam, _ := getRegistryTags(f)
 			if f.PkgPath == "" && f.Type != paramsType && !isLazyParam {
 				p.requires = append(p.requires, f.Type)
 			}
@@ -272,7 +272,24 @@ func createParamStruct(t reflect.Type, params []reflect.Value) reflect.Value {
 			}
 		}
 		if !found {
-			panic("could not find struct param " + f.Type().String() + "for " + t.String())
+			structField := paramsStruct.Type().Field(i)
+			structFieldType := structField.Type
+			if structFieldType.Kind() == reflect.Ptr {
+				structFieldType = structFieldType.Elem()
+			}
+			isStruct := structFieldType.Kind() == reflect.Struct
+			if !isStruct {
+				panic("could not find struct param " + f.Type().String() + " for " + t.String())
+			}
+			// if it is a point we might allow nil values
+			_, allowNil := getRegistryTags(structField)
+			if !allowNil {
+				panic("could not find struct param " + f.Type().String() + " for " + t.String())
+			}
+			if f.Type().Kind() != reflect.Ptr {
+				panic("only param struct fields of type Pointer can be tagged as 'allownnil'. Type is " + f.Type().String() + " for " + t.String())
+			}
+			// we leave it at null value
 		}
 	}
 	return paramsStructPtr
@@ -315,4 +332,14 @@ func exactSubSignatureMatch(ctorType reflect.Type, idx int, params []interface{}
 		}
 	}
 	return true
+}
+
+func getRegistryTags(field reflect.StructField) (isLazy, allowNil bool) {
+	tag, found := field.Tag.Lookup("registry")
+	if !found || tag == "" {
+		return false, false
+	}
+	isLazy = strings.Contains(tag, "lazy")
+	allowNil = strings.Contains(tag, "allownil")
+	return isLazy, allowNil
 }

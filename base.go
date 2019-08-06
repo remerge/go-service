@@ -22,6 +22,7 @@ import (
 // - a HTTP server (if requested)
 // - a debug server (if requested, serves prometeus metrics)
 // - a debug forwarder (if requested)
+// - a health checker (if requested)
 // - a rollbar instance (sends logged Errors to rollbar in production mode)
 // - a stackdriver connection to colelct ongoing profiles (if requested)
 //
