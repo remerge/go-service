@@ -11,12 +11,6 @@ import (
 	"github.com/remerge/cue"
 )
 
-func registerHealthChecker(r Registry) {
-	r.Register(func(mr metrics.Registry) (*HealthChecker, error) {
-		return NewHealthChecker(CodeVersion, time.Second*15, mr, NewHealthReportLogger(cue.NewLogger("health"), CodeVersion)), nil
-	})
-}
-
 // HealthCheckable is a subject which's health can be checked
 type HealthCheckable interface {
 	Healthy() error
@@ -55,6 +49,23 @@ type HealthChecker struct {
 	running int32
 	closing int32
 	closeCh chan struct{}
+}
+
+// NewDefaultHealthCheckerService calls NewDefaultHealthChecker and registers the Healthchecker as a service with a runner
+// so it is started/stopped.
+func NewDefaultHealthCheckerService(r *RunnerWithRegistry, mr metrics.Registry) (*HealthChecker, error) {
+	hc, err := NewDefaultHealthChecker(mr)
+	if err != nil {
+		return nil, err
+	}
+	r.Add(hc)
+	return hc, nil
+}
+
+// NewDefaultHealthChecker is a registry constructor function that creates a HealthChecker with sane default if
+// requested from the registry
+func NewDefaultHealthChecker(mr metrics.Registry) (*HealthChecker, error) {
+	return NewHealthChecker(CodeVersion, time.Second*15, mr, NewHealthReportLogger(cue.NewLogger("health"), CodeVersion)), nil
 }
 
 // NewHealthChecker creates new Healthchecker, given a code version, in what interval registered checks should be executed and a set of listeners if a new HealthReport is available

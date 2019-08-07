@@ -40,6 +40,7 @@ type provider struct {
 	provides                reflect.Type
 	ctor                    reflect.Value
 	instance                *reflect.Value
+	staticArgs              []interface{}
 }
 
 // Register registers a component constructor function with the registry. The constructor function can
@@ -50,7 +51,7 @@ type provider struct {
 // 1) if the function signature has a single parameter with a struct type that embeds the Params struct. In this case the structs members
 //    are used as requirements for the ctor. This helps with ctor that require a large number of dependencies
 // 2) If there is an exact sub signature match with parameters passed to Request
-func (r *Registry) Register(ctor interface{}) (func(...interface{}) (interface{}, error), error) {
+func (r *Registry) Register(ctor interface{}, args ...interface{}) (func(...interface{}) (interface{}, error), error) {
 	t := reflect.TypeOf(ctor)
 
 	if t.Kind() != reflect.Func {
@@ -68,11 +69,14 @@ func (r *Registry) Register(ctor interface{}) (func(...interface{}) (interface{}
 	}
 
 	p := &provider{
-		provides: provided,
-		ctor:     reflect.ValueOf(ctor),
+		provides:   provided,
+		ctor:       reflect.ValueOf(ctor),
+		staticArgs: args,
 	}
 
 	if t.NumIn() == 1 && embedsType(t.In(0), paramsType) {
+		// if the constructor only has one parameter and that parameter embeds
+		// the type paramType we assume it is a struct that wraps parameters
 		p.expectedParamStruct = t.In(0)
 		pt := t.In(0)
 		if pt.Kind() == reflect.Ptr {
@@ -140,6 +144,12 @@ func (r *Registry) RequestAndSet(target interface{}, params ...interface{}) erro
 
 func (r *Registry) interfaceFor(p *provider, params []interface{}) (interface{}, error) {
 	if p.instance == nil {
+
+		// join in any provider static args
+		for _, arg := range p.staticArgs {
+			params = append(params, arg)
+		}
+
 		if err := r.resolve(p, params); err != nil {
 			r.log.Debugf("could not resolve %v params=%v err=%v", p.ctor.Type(), params, err)
 			return nil, err
@@ -157,8 +167,8 @@ func (r *Registry) providerFor(t reflect.Type) (*provider, error) {
 	return provider, nil
 }
 
-// resolve is recursive - it doesn't build a proper graph at the moment however this
-// should be sufficient  for our usecases for now
+// resolve is recursive - it doesn't build a proper graph at the moment
+// This should be sufficient for our usecases at the moment
 func (r *Registry) resolve(p *provider, extraParams []interface{}) error {
 	r.log.Debugf("resolving %v, requires=%v extraParams=%v", p.provides, p.requires, extraParams)
 

@@ -50,6 +50,10 @@ func Cmd(name string, initFnc InitFnc) *cobra.Command {
 	r.Register(func() (*cobra.Command, error) {
 		return cmd, nil
 	})
+	// so services can register themselves for execution
+	r.Register(func() (*RunnerWithRegistry, error) {
+		return r, nil
+	})
 	RegisterBase(r.Registry, name)
 	initFnc(r)
 

@@ -18,6 +18,8 @@ type RunnerWithRegistry struct {
 	*Runner
 }
 
+// Create creates an instance and sets s (which must be a pointer) to the new instance given
+// a set of parameters. Furthermore it adds the new object to the list of executed services.
 func (r *RunnerWithRegistry) Create(s interface{}, params ...interface{}) {
 	err := r.RequestAndSet(s, params...)
 	if err != nil {

@@ -22,15 +22,23 @@ type Tracker struct {
 	log           cue.Logger
 }
 
-func registerTracker(r Registry, name string) {
-	r.Register(func(log cue.Logger, cmd *cobra.Command) (*Tracker, error) {
-		t := &Tracker{
-			log:  log,
-			Name: name,
-		}
-		t.configureFlags(cmd)
-		return t, nil
-	})
+func NewTracker(log cue.Logger, cmd *cobra.Command, name string) (*Tracker, error) {
+	t := &Tracker{
+		log:  log,
+		Name: name,
+	}
+	t.configureFlags(cmd)
+	return t, nil
+}
+
+func NewTrackerService(r *RunnerWithRegistry, log cue.Logger, cmd *cobra.Command, name string) (*Tracker, error) {
+	t, err := NewTracker(log, cmd, name)
+	if err != nil {
+		return nil, err
+	}
+	r.Add(t)
+	return t, nil
+
 }
 
 func (t *Tracker) configureFlags(cmd *cobra.Command) {

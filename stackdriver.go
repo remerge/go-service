@@ -18,19 +18,18 @@ type stackdriver struct {
 	name              string
 }
 
-func registerStackdriver(r Registry, name string) {
-	r.Register(func(log cue.Logger, cmd *cobra.Command) (*stackdriver, error) {
-		s := &stackdriver{
-			log:  log,
-			name: name,
-		}
-		cmd.Flags().BoolVar(
-			&s.enableStackdriver,
-			"enable-stackdriver", s.enableStackdriver,
-			"Enable stackdriver",
-		)
-		return s, nil
-	})
+func newStackdriverService(r *RunnerWithRegistry, log cue.Logger, cmd *cobra.Command, name string) (*stackdriver, error) {
+	s := &stackdriver{
+		log:  log,
+		name: name,
+	}
+	cmd.Flags().BoolVar(
+		&s.enableStackdriver,
+		"enable-stackdriver", s.enableStackdriver,
+		"Enable stackdriver",
+	)
+	r.Add(s)
+	return s, nil
 }
 
 func (s *stackdriver) Init() error {

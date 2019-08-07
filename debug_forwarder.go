@@ -27,17 +27,15 @@ type DebugForwaderParams struct {
 	Cmd                 *cobra.Command
 }
 
-func registerDebugForwarder(r Registry) {
-	r.Register(func(params *DebugForwaderParams) (*debugForwader, error) {
-		f := &debugForwader{
-			Port:   params.Port,
-			log:    params.Log,
-			quit:   make(chan bool),
-			exited: make(chan bool),
-		}
-		f.configureFlags(params.Cmd)
-		return f, nil
-	})
+func newDebugForwader(params *DebugForwaderParams) (*debugForwader, error) {
+	f := &debugForwader{
+		Port:   params.Port,
+		log:    params.Log,
+		quit:   make(chan bool),
+		exited: make(chan bool),
+	}
+	f.configureFlags(params.Cmd)
+	return f, nil
 }
 
 func (f *debugForwader) configureFlags(cmd *cobra.Command) {

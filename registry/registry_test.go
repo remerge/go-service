@@ -96,6 +96,25 @@ func TestServiceRegistry(t *testing.T) {
 		assert.Equal(t, target.C, target.D.C)
 	})
 
+	t.Run("ctor with arguments on register", func(t *testing.T) {
+		r := New()
+
+		type A struct{}
+		type B struct {
+			A    *A
+			Name string
+		}
+		r.Register(func() (*A, error) { return &A{}, nil })
+		_, err := r.Register(func(a *A, name string) (*B, error) {
+			return &B{A: a, Name: name}, nil
+		}, "hallo")
+		require.NoError(t, err)
+		v, err := r.Request(reflect.TypeOf(&B{}))
+		require.NoError(t, err)
+		require.Equal(t, "hallo", (v.(*B)).Name)
+
+	})
+
 	t.Run("ctor with param object", func(t *testing.T) {
 		r := New()
 

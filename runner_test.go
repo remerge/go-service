@@ -49,6 +49,48 @@ func TestRunner(t *testing.T) {
 	require.True(t, service.shutdownRun)
 	require.True(t, shutdownComplete)
 }
+
+func TestRunnerOnInitSignalTimeout(t *testing.T) {
+	s1 := &testService{}
+	s2 := &testService{sleepOnInit: 20 * time.Millisecond}
+	s3 := &testService{}
+
+	r := NewRunner()
+	r.RunnerConfig.OnInitSignalTimeout = 5 * time.Millisecond
+	var shutdownComplete bool
+	r.PostShutdown = func(error) { shutdownComplete = true }
+	r.Add(s1)
+	r.Add(s2)
+	r.Add(s3)
+
+	c := make(chan error)
+	running := make(chan bool)
+	go func() {
+		running <- true
+		c <- r.Run()
+	}()
+	<-running
+	time.Sleep(2 * time.Millisecond)
+	r.Stop()
+
+	select {
+	case err := <-c:
+		require.NoError(t, err)
+	case <-time.After(50 * time.Millisecond):
+		t.Error("Run did not terminate in time")
+
+	}
+	require.True(t, s1.initRun)
+	require.True(t, s1.shutdownRun)
+
+	require.False(t, s2.initRun)
+	require.False(t, s2.shutdownRun)
+
+	require.False(t, s3.initRun)
+	require.False(t, s3.shutdownRun)
+
+	require.True(t, shutdownComplete)
+}
 func TestRunnerErrorOnInit(t *testing.T) {
 	service := &testService{errOnInit: errors.New("error on init")}
 	r := NewRunner()

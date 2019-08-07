@@ -5,11 +5,6 @@ import (
 	"os"
 
 	"github.com/remerge/go-service"
-
-
-
-
-
 	"github.com/spf13/cobra"
 )
 

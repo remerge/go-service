@@ -82,12 +82,12 @@ func RegisterBase(r Registry, name string) {
 			return base.promMetrics, nil
 		})
 
-		registerDebugForwarder(r)
-		registerHealthChecker(r)
-		registerTracker(r, name)
+		r.Register(NewDefaultHealthCheckerService)
+		r.Register(NewTrackerService, name)
+		r.Register(newStackdriverService, name)
+		r.Register(newDebugForwader)
 		registerServer(r, name)
 		registerDebugServer(r, name)
-		registerStackdriver(r, name)
 
 		return base, nil
 	})
@@ -170,34 +170,37 @@ func (b *Base) Shutdown(sig os.Signal) {
 	b.Log.Info("shutdown done")
 }
 
-// CreateTracker creates a tracker object for this Base
-func (b *Base) CreateTracker(r *RunnerWithRegistry) {
-	r.Create(&b.Tracker)
+// UseTracker creates a tracker object for this Base and registers it as a service to be run
+func (b *Base) UseTracker(r *RunnerWithRegistry) {
+	r.RequestAndSet(&b.Tracker)
 }
 
-// CreateServer creates a server object for this Base listening on a given port
-func (b *Base) CreateServer(r *RunnerWithRegistry, port int) {
-	r.Create(&b.Server, ServerConfig{Port: port})
+// UseStackdriver create a stackdriver service and registers it as a service to be run
+func (b *Base) UseStackdriver(r *RunnerWithRegistry) {
+	r.RequestAndSet(&b.stackdriver)
 }
 
-// CreateDebugServer creates a debug server object for this Base listening on a given port
+// CreateHealthChecker create a HealthChecker and registers it as a service to be run
+func (b *Base) UseHealthChecker(r *RunnerWithRegistry) {
+	r.RequestAndSet(&b.HealthChecker)
+}
+
+// CreateServer creates a server object for this Base and configures the default port and
+// registers it as a service to be run
+func (b *Base) CreateServer(r *RunnerWithRegistry, defaultPort int) {
+	r.Create(&b.Server, ServerConfig{Port: defaultPort})
+}
+
+// CreateDebugServer creates a debug server object for this Base and configures the default port and
+// registers it as a service to be run
 func (b *Base) CreateDebugServer(r *RunnerWithRegistry, defaultPort int) {
 	r.Create(&b.DebugServer, ServerConfig{Port: defaultPort})
 }
 
-// CreateDebugForwarder creates a debug forwarder for this Base listening on a given port
-func (b *Base) CreateDebugForwarder(r *RunnerWithRegistry, port int) {
-	r.Create(&b.debugForwader, DebugForwaderConfig{Port: port})
-}
-
-// CreateStackdriver create a stackdriver service
-func (b *Base) CreateStackdriver(r *RunnerWithRegistry) {
-	r.Create(&b.stackdriver)
-}
-
-// CreateHealthChecker create a healthChecker
-func (b *Base) CreateHealthChecker(r *RunnerWithRegistry) {
-	r.Create(&b.HealthChecker)
+// CreateDebugForwarder creates a debug forwarder for this Base and configures the default port and
+// registers it as a service to be run
+func (b *Base) CreateDebugForwarder(r *RunnerWithRegistry, defaultPort int) {
+	r.Create(&b.debugForwader, DebugForwaderConfig{Port: defaultPort})
 }
 
 // ForwardToDebugConns forwards data to connected debug listeners

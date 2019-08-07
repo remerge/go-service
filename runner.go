@@ -17,7 +17,7 @@ import (
 // Runner runs services. Services that implement the Service interface can be added
 // using the Add method. On Run they are started in the order of adding and Runner waits
 // for a shutdown signal. The signal can come from the OS or Stop can be called. If such
-// a signal is received the services are shutdown in reverse order. A timo out for service
+// a signal is received the services are shutdown in reverse order. A timeout for service
 // startup and shutdown can be configured using RunnerConfig. If a service doesn't terminate
 // in time, the whole process is kill with a KILL signal.
 type Runner struct {
@@ -30,9 +30,10 @@ type Runner struct {
 // RunnerConfig allows to configure timeouts for a Runner and provides a way to register a
 // post shutdown callback.
 type RunnerConfig struct {
-	ShutdownTimeout time.Duration
-	InitTimeout     time.Duration
-	PostShutdown    func(error)
+	ShutdownTimeout     time.Duration
+	InitTimeout         time.Duration
+	OnInitSignalTimeout time.Duration
+	PostShutdown        func(error)
 }
 
 type runnable struct {
@@ -43,9 +44,10 @@ type runnable struct {
 // NewRunnerDefaultConfig create a default RunnerConfig
 func NewRunnerDefaultConfig() RunnerConfig {
 	return RunnerConfig{
-		InitTimeout:     time.Minute,
-		ShutdownTimeout: time.Minute,
-		PostShutdown:    defaultPostShutdown,
+		InitTimeout:         time.Minute,
+		ShutdownTimeout:     time.Minute,
+		OnInitSignalTimeout: 10 * time.Second,
+		PostShutdown:        defaultPostShutdown,
 	}
 }
 
@@ -79,30 +81,42 @@ func (r *Runner) Add(s Service) {
 
 // Run initializes all services added to this runner in the order  of adding. If a termination signal is received all services are
 // shutdown in reverse order. If there was an error during initialization Run return this error early
-func (r *Runner) Run() error {
-	var names []string
-	for _, s := range r.services {
-		names = append(names, s.name)
-	}
-	r.log.Infof("starting services in order: %s", strings.Join(names, ","))
-	err := r.initServices()
+func (r *Runner) Run() (err error) {
+	var sig os.Signal
+	var inited []*runnable
+
+	defer func() {
+		reversed := reverseServices(inited)
+
+		r.log.Infof("shutting down services in order: %s", joinedServiceNames(reversed))
+
+		shutdownErr := r.shutdownServices(reversed, sig)
+
+		if r.PostShutdown != nil {
+			r.PostShutdown(shutdownErr)
+			_ = cue.Close(5 * time.Second)
+		}
+
+		if err == nil {
+			err = shutdownErr
+		}
+
+	}()
+
+	r.log.Infof("starting services in order: %s", joinedServiceNames(r.services))
+	inited, sig, err = r.initServices()
+	r.log.Infof("service start result err=%v signal=%v started=%s", err, sig, joinedServiceNames(inited))
+
 	if err != nil {
-		// if one service failed to init, we just panic
+		// if one service failed to init, we return and shutdown tthe inited
 		return errors.Wrap(err, "error during startup")
 	}
-	sig := <-r.signals
-	r.log.Infof("shutdown signaled: %s", sig.String())
-	var reverseName []string
-	for i := len(names) - 1; i >= 0; i-- {
-		reverseName = append(reverseName, names[i])
-	}
-	r.log.Infof("stopping services in order: %s", strings.Join(reverseName, ","))
-	err = r.shutdownServices(sig)
-	if r.PostShutdown != nil {
-		r.PostShutdown(err)
 
-		_ = cue.Close(5 * time.Second)
+	if sig == nil {
+		sig = <-r.signals
+		r.log.Infof("signaled: %s", sig.String())
 	}
+
 	return err
 }
 
@@ -120,7 +134,9 @@ func (r *Runner) setupSignals() {
 	)
 }
 
-func (r *Runner) initServices() error {
+func (r *Runner) initServices() ([]*runnable, os.Signal, error) {
+	var inited []*runnable
+
 	timer := time.NewTimer(r.InitTimeout)
 	defer timer.Stop()
 	c := make(chan error)
@@ -133,28 +149,39 @@ func (r *Runner) initServices() error {
 		select {
 		case err := <-c:
 			if err != nil {
-				return errors.Wrapf(err, "service init failed for %s", s.name)
+				return inited, nil, errors.Wrapf(err, "service init failed for %s", s.name)
 			}
 			r.log.WithFields(cue.Fields{"service": s.name, "took": time.Now().Sub(t)}).Info("service init successful")
+			inited = append(inited, s)
+		case sig := <-r.signals:
+			r.log.Infof("signaled: %s, waiting %v for %s to finish init before termination", sig.String(), r.OnInitSignalTimeout, s.name)
+			extraTime := time.NewTimer(r.OnInitSignalTimeout)
+			var err error
+			select {
+			case err = <-c:
+				if err == nil {
+					inited = append(inited, s)
+				}
+			case <-extraTime.C:
+				r.log.Infof("signaled: %s, waiting for %s to finish init timed out, ignoring", sig.String(), s.name)
+			}
+			return inited, sig, err
 		case <-timer.C:
-			return newTimeoutError("timeout on service init", s.name, r.InitTimeout)
+			return inited, nil, newTimeoutError("timeout on service init", s.name, r.InitTimeout)
 		}
 	}
-	return nil
+	return inited, nil, nil
 }
 
 // shutdownServices tries to shutdown every service/runnable owned by this runner in reverse order of initialization.
 // It passes the given signal to the Shutdown method of the runnable. If the accumulated time it takes to shutdown
 // all services is larger than the ShutdownTimeout, the shutdown is stopped and this methods returns a timeout error (as in timeout happend). Otherwise  nil is returned
-func (r *Runner) shutdownServices(sig os.Signal) error {
+func (r *Runner) shutdownServices(services []*runnable, sig os.Signal) error {
 	timer := time.NewTimer(r.ShutdownTimeout)
 	defer timer.Stop()
 
-	var shuttingDown *runnable
-
 	c := make(chan struct{})
-	for i := len(r.services) - 1; i >= 0; i-- {
-		shuttingDown = r.services[i]
+	for _, shuttingDown := range services {
 		r.log.WithValue("service", shuttingDown.name).Info("shutting down")
 
 		shutdownStarted := make(chan struct{})
@@ -235,4 +262,22 @@ func isTimeoutError(err error) bool {
 	}
 	_, inner := errors.Cause(err).(*timeoutError)
 	return inner
+}
+
+func joinedServiceNames(services []*runnable) string {
+	if len(services) == 0 {
+		return ""
+	}
+	var names []string
+	for _, s := range services {
+		names = append(names, s.name)
+	}
+	return strings.Join(names, ",")
+}
+
+func reverseServices(s []*runnable) []*runnable {
+	for i, j := 0, len(s)-1; i < j; i, j = i+1, j-1 {
+		s[i], s[j] = s[j], s[i]
+	}
+	return s
 }

@@ -9,9 +9,21 @@ type Service interface {
 	Shutdown(sig os.Signal)
 }
 
+type Initable interface {
+	Init() error
+}
+
+type Runnable interface {
+	Run() error
+}
+
+type Shutdownable interface {
+	Stop(os.Signal) error
+}
+
 // Registry is the interface to our Component registry, this
 // should be defined in every package relying on the registry to decouple
 // it from the actual registry.Registry interface
 type Registry interface {
-	Register(ctor interface{}) (func(...interface{}) (interface{}, error), error)
+	Register(ctor interface{}, args ...interface{}) (func(...interface{}) (interface{}, error), error)
 }
