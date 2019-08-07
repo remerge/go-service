@@ -26,11 +26,12 @@ require (
 	github.com/remerge/go-env v0.0.0-20180212143913-0274550cec6b
 	github.com/remerge/go-lock_free_timer v0.0.0-20181129173822-9894c16a08a7
 	github.com/remerge/go-timestr v0.0.0-20180212143953-26332ce36f5a // indirect
-	github.com/remerge/go-tools v0.0.0-20181109161802-c3df351fb417
+	github.com/remerge/go-tools v0.0.0-20190620185504-01d771328c35
 	github.com/remerge/go-tracker v0.0.0-20180417095915-e9f519cc25f1
 	github.com/spf13/cobra v0.0.3
 	github.com/spf13/pflag v1.0.1
-	github.com/stretchr/testify v1.2.2
+	github.com/stretchr/objx v0.1.1 // indirect
+	github.com/stretchr/testify v1.3.0
 	github.com/tylerb/graceful v0.0.0-20170221171003-d72b0151351a
 	github.com/ugorji/go v0.0.0-20180407103000-f3cacc17c85e // indirect
 	golang.org/x/build v0.0.0-20190107030240-03ea0966a8bf // indirect
