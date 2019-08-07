@@ -30,7 +30,6 @@ require (
 	github.com/remerge/go-tracker v0.0.0-20180417095915-e9f519cc25f1
 	github.com/spf13/cobra v0.0.3
 	github.com/spf13/pflag v1.0.1
-	github.com/stretchr/objx v0.1.1 // indirect
 	github.com/stretchr/testify v1.3.0
 	github.com/tylerb/graceful v0.0.0-20170221171003-d72b0151351a
 	github.com/ugorji/go v0.0.0-20180407103000-f3cacc17c85e // indirect

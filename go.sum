@@ -102,8 +102,6 @@ github.com/remerge/go-lock_free_timer v0.0.0-20181129173822-9894c16a08a7 h1:SXR2
 github.com/remerge/go-lock_free_timer v0.0.0-20181129173822-9894c16a08a7/go.mod h1:sRcrlQNP9YVbtk59yzQJ9DPv1P8ghwhX20KghYrWIRM=
 github.com/remerge/go-timestr v0.0.0-20180212143953-26332ce36f5a h1:ghs7K2L8a2u3kdzE5LpZ5Znr04V78vHbWv5njjEUiq8=
 github.com/remerge/go-timestr v0.0.0-20180212143953-26332ce36f5a/go.mod h1:db/JqQzWu1I5MgUWZm2w3Qa+uZWvbJTEdibFbE5ypRY=
-github.com/remerge/go-tools v0.0.0-20181109161802-c3df351fb417 h1:IUyFbnORzDUxE2xMYwKVVMvyK3Vlwp/QlsY+HzjRi1Q=
-github.com/remerge/go-tools v0.0.0-20181109161802-c3df351fb417/go.mod h1:R+/Cc2xDweb5453/KnGGbgYevSbfi084m+QxcCtRUoo=
 github.com/remerge/go-tools v0.0.0-20190620185504-01d771328c35 h1:023BI+czXzvlhK+wWN2059drWGOjWmyZAmJ/+Xbxui8=
 github.com/remerge/go-tools v0.0.0-20190620185504-01d771328c35/go.mod h1:dT5W9VdRFwOLNSVP5/E2OpB6axzjpZ5Kw1cSUFAxzQ8=
 github.com/remerge/go-tracker v0.0.0-20180417095915-e9f519cc25f1 h1:Bsul8SEo9gVVwR8FWM9c9jfsxaKgd9rCK6RBQroorH8=
@@ -141,10 +139,8 @@ github.com/spf13/cobra v0.0.3/go.mod h1:1l0Ry5zgKvJasoi3XT1TypsSe7PqH0Sj9dhYf7v3
 github.com/spf13/pflag v1.0.1 h1:aCvUg6QPl3ibpQUxyLkrEkCHtPqYJL4x9AuhqVqFis4=
 github.com/spf13/pflag v1.0.1/go.mod h1:DYY7MBk1bdzusC3SYhjObp+wFpr4gzcvqqNjLnInEg4=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
-github.com/stretchr/objx v0.1.1/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
-github.com/stretchr/testify v1.2.1/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
-github.com/stretchr/testify v1.2.2 h1:bSDNvY7ZPG5RlJ8otE/7V6gMiyenm9RtJ7IUVIAoJ1w=
 github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
+github.com/stretchr/testify v1.3.0 h1:TivCn/peBQ7UY8ooIcPgZFpTNSz0Q2U6UrFlUfqbe0Q=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
 github.com/tarm/serial v0.0.0-20180830185346-98f6abe2eb07/go.mod h1:kDXzergiv9cbyO7IOYJZWg1U88JhDg3PB6klq9Hg2pA=
 github.com/tylerb/graceful v0.0.0-20170221171003-d72b0151351a h1:s7Ayvb4FBNAV0Na/34dTGg1KcvPzhcTrjTGoT0dMa9o=
