@@ -213,7 +213,7 @@ func (b *Base) HasOpenDebugForwardingConns() bool {
 	return b.debugForwader.hasOpenConnections()
 }
 
-func SafeCreate(ctor func(...interface{}) (interface{}, error), err error) interface{} {
+func MustCreate(ctor func(...interface{}) (interface{}, error), err error) interface{} {
 	if err != nil {
 		panic(err)
 	}

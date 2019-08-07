@@ -33,7 +33,7 @@ func Execute() {
 func Init(r *service.RunnerWithRegistry) {
 	// without any requirements:
 	// s := &ExampleService{}
-	s := service.SafeCreate(r.Register(func(cmd *cobra.Command) (*ExampleService, error) {
+	s := service.MustCreate(r.Register(func(cmd *cobra.Command) (*ExampleService, error) {
 		return &ExampleService{}, nil
 	})).(*ExampleService)
 

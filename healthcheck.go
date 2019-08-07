@@ -89,7 +89,7 @@ func (h *HealthChecker) AddListener(l HealthReportListener) {
 
 // temp to comply with service interface
 func (h *HealthChecker) Init() error {
-	h.Run()
+	h.run()
 	return nil
 }
 
@@ -98,9 +98,9 @@ func (h *HealthChecker) Shutdown(os.Signal) {
 	h.Close()
 }
 
-// Run starts healthcheck loop.
+// run starts healthcheck loop.
 // This method can be safely called multiple times.
-func (h *HealthChecker) Run() {
+func (h *HealthChecker) run() {
 	if atomic.LoadInt32(&h.closing) == 1 || atomic.LoadInt32(&h.running) == 1 {
 		return
 	}
