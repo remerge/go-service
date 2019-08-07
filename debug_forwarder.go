@@ -3,145 +3,197 @@ package service
 import (
 	"fmt"
 	"net"
+	"os"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/rcrowley/go-metrics"
+	"github.com/spf13/cobra"
+
 	"github.com/remerge/cue"
+	"github.com/remerge/go-service/registry"
 )
 
-const (
-	debugForwarderMaxConn      uint32 = 100
-	debugForwarderWriteTimeout        = time.Millisecond * 500
-)
+const debugForwarderMaxConn = 64
 
-// DebugForwarder accepts connections on given port and multiplicities
-// feeding data to incoming connections.
-type DebugForwarder struct {
+type DebugForwaderConfig struct {
 	Port int
-	log  cue.Logger
-
-	listener  net.Listener
-	conns     sync.Map
-	connCount uint32
-
-	closing uint32
-
-	// TODO (spin): Remove these metrics after proof correct behaviour
-
-	connAcceptCounter metrics.Counter
-	connCloseCounter  metrics.Counter
 }
 
-type connection struct {
-	net.Conn
-	f     *DebugForwarder
-	guard uint32
+type DebugForwaderParams struct {
+	registry.Params
+	DebugForwaderConfig `registry:"lazy"`
+	Log                 cue.Logger
+	Cmd                 *cobra.Command
 }
 
-func (c *connection) Close() error {
-	if atomic.CompareAndSwapUint32(&c.guard, 0, 1) {
-		atomic.AddUint32(&c.f.connCount, ^uint32(0))
-		c.f.connCloseCounter.Inc(1)
+func newDebugForwader(params *DebugForwaderParams) (*debugForwader, error) {
+	f := &debugForwader{
+		Port:   params.Port,
+		log:    params.Log,
+		quit:   make(chan bool),
+		exited: make(chan bool),
 	}
-	return c.Conn.Close()
-}
-func NewDebugForwarder(logger cue.Logger, metricsRegistry metrics.Registry, port int) (f *DebugForwarder, err error) {
-	f = &DebugForwarder{
-		log:               logger,
-		Port:              port,
-		connAcceptCounter: metrics.GetOrRegisterCounter("debug conn_accept", metricsRegistry),
-		connCloseCounter:  metrics.GetOrRegisterCounter("debug conn_close", metricsRegistry),
-	}
-	f.listener, err = net.Listen("tcp", fmt.Sprintf(":%d", f.Port))
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize debug listening socket: %v", err)
-	}
-
-	f.log.WithFields(cue.Fields{"port": f.Port}).Info("start debug listener")
-
-	go func(ln net.Listener) {
-		for {
-			conn, acceptErr := ln.Accept()
-			if acceptErr != nil {
-				_ = f.log.Error(acceptErr, "failed to accept debug listener connection, terminate loop")
-				break
-			}
-			f.log.WithFields(cue.Fields{"remote_addr": conn.RemoteAddr().String()}).Info("debug connection opened")
-
-			if atomic.LoadUint32(&f.closing) == 1 {
-				f.log.WithFields(cue.Fields{"remote_addr": conn.RemoteAddr().String()}).Warnf("dropping conn: closed")
-				_, _ = conn.Write([]byte("closed\n"))
-				_ = conn.Close()
-				break
-			}
-
-			if debugForwarderMaxConn < atomic.LoadUint32(&f.connCount) {
-				f.log.WithFields(cue.Fields{"remote_addr": conn.RemoteAddr().String()}).Warnf("dropping conn: max reached")
-				_, _ = conn.Write([]byte("max conn reached\n"))
-				_ = conn.Close()
-				continue
-			}
-			atomic.AddUint32(&f.connCount, 1)
-			f.conns.Store(conn.RemoteAddr().String(), &connection{Conn: conn, f: f})
-			f.connAcceptCounter.Inc(1)
-		}
-	}(f.listener)
+	f.configureFlags(params.Cmd)
 	return f, nil
 }
 
-func (f *DebugForwarder) Close() error {
-	if f == nil || !atomic.CompareAndSwapUint32(&f.closing, 0, 1) {
+func (f *debugForwader) configureFlags(cmd *cobra.Command) {
+	cmd.Flags().IntVar(
+		&f.Port,
+		"debug-fwd-port", f.Port,
+		"Debug forwarding port",
+	)
+}
+
+type debugForwader struct {
+	sync.Mutex
+	Port      int
+	conns     sync.Map
+	connCount uint32
+	connLn    net.Listener
+	log       cue.Logger
+	quit      chan bool
+	exited    chan bool
+}
+
+type debugConn struct {
+	net.Conn
+	o         sync.Once
+	closeWait sync.WaitGroup
+	msgs      chan []byte
+	forwarder *debugForwader
+}
+
+func (f *debugForwader) Init() error {
+	if f.Port == 0 {
 		return nil
 	}
-	_ = f.listener.Close()
-	f.conns.Range(func(k, v interface{}) bool {
-		c := v.(*connection)
-		_ = c.Close()
-		return true
-	})
+	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", f.Port))
+	if err != nil {
+		return fmt.Errorf("failed to initialize debug listening socket: %v", err)
+	}
+	f.log.WithFields(cue.Fields{"port": f.Port}).Info("start debug listener")
+	f.connLn = ln
+	go func(ln net.Listener) {
+		for {
+			select {
+			case <-f.quit:
+				close(f.exited)
+				return
+			default:
+				ln.(*net.TCPListener).SetDeadline(time.Now().Add(250 * time.Millisecond))
+				c, err := ln.Accept()
+				if err != nil {
+					if os.IsTimeout(err) {
+						break
+					}
+					f.log.Error(err, "failed to accept debug listener connection, terminate loop")
+					return
+				}
+				connCount := atomic.LoadUint32(&f.connCount)
+				if debugForwarderMaxConn <= connCount {
+					f.log.WithFields(cue.Fields{"remote_addr": c.RemoteAddr().String(), "connections": connCount}).Warnf("max debug connections reached, dropping new connection")
+					_, _ = c.Write([]byte(fmt.Sprintf("max debug connections reached (%d)\n", connCount)))
+					_ = c.Close()
+					break
+				}
+				f.log.WithFields(cue.Fields{"remote_addr": c.RemoteAddr().String()}).Info("debug connection opened")
+				atomic.AddUint32(&f.connCount, 1)
+				dc := &debugConn{
+					Conn:      c,
+					forwarder: f,
+					msgs:      make(chan []byte, 1024),
+				}
+				dc.closeWait.Add(1)
+				f.conns.Store(c.RemoteAddr().String(), dc)
+				go dc.loop()
+			}
+		}
+	}(ln)
 	return nil
 }
 
-func (f *DebugForwarder) HasOpenConnections() bool {
-	if f == nil || atomic.LoadUint32(&f.closing) == 1 {
+func (f *debugForwader) Shutdown(os.Signal) {
+	if f == nil {
+		return
+	}
+	close(f.quit)
+	<-f.exited
+	if f.connLn != nil {
+		f.connLn.Close()
+	}
+
+	f.conns.Range(func(k, v interface{}) bool {
+		c := v.(*debugConn)
+		c.closeAndWait()
+		return true
+	})
+}
+
+func (f *debugForwader) hasOpenConnections() bool {
+	if f == nil {
 		return false
 	}
 	return atomic.LoadUint32(&f.connCount) > 0
 }
 
-func (f *DebugForwarder) Write(data []byte) (n int, err error) {
-	if f == nil || atomic.LoadUint32(&f.closing) == 1 {
-		return 0, nil
+func (f *debugForwader) forward(data []byte) {
+	if f == nil {
+		return
 	}
 	if atomic.LoadUint32(&f.connCount) == 0 {
-		return 0, nil
+		return
 	}
-
 	f.conns.Range(func(k, v interface{}) bool {
-		c := v.(*connection)
-		go func(k interface{}, c *connection, d []byte) {
-			var badConn bool
-			if setErr := c.SetWriteDeadline(time.Now().Add(debugForwarderWriteTimeout)); setErr != nil {
-				badConn = true
-			}
-			if !badConn {
-				if _, writeErr := c.Write(data); writeErr != nil {
-					_ = c.Close()
-					if _, ok := f.conns.Load(k); ok {
-						f.log.WithFields(cue.Fields{"source": k}).Info("debug connection closed")
-					}
-					badConn = true
-				}
-			}
-			if badConn {
-				f.conns.Delete(k)
-				_ = c.Close()
-			}
-
-		}(k, c, data)
+		c := v.(*debugConn)
+		select {
+		case c.msgs <- data:
+		default:
+			// TODO: log that debug conn can't keep up with the speed
+		}
 		return true
 	})
-	return len(data), nil
+}
+
+func (f *debugForwader) remove(k string) {
+	f.Lock()
+	if _, ok := f.conns.Load(k); ok {
+		f.log.WithFields(cue.Fields{"source": k}).Info("debug connection closed")
+		f.conns.Delete(k)
+		atomic.AddUint32(&f.connCount, ^uint32(0))
+	}
+	f.Unlock()
+}
+
+func (c *debugConn) Close() {
+	c.o.Do(func() { close(c.msgs) })
+}
+
+func (c *debugConn) closeAndWait() {
+	c.Close()
+	c.closeWait.Wait()
+}
+
+func (c *debugConn) loop() {
+	defer c.closeWait.Done()
+	defer c.Conn.Close()
+	defer c.forwarder.remove(c.RemoteAddr().String())
+	for {
+		data, ok := <-c.msgs
+		if !ok {
+			return
+		}
+		if len(data) == 0 {
+			continue
+		}
+		err := c.SetWriteDeadline(time.Now().Add(time.Second))
+		if err == nil {
+			_, err = c.Write(data)
+		}
+		if err != nil {
+			c.forwarder.log.WithFields(cue.Fields{"error": err}).Info("debug connection forwarding failed, terminate")
+			return
+		}
+	}
 }

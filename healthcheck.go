@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -50,6 +51,23 @@ type HealthChecker struct {
 	closeCh chan struct{}
 }
 
+// NewDefaultHealthCheckerService calls NewDefaultHealthChecker and registers the Healthchecker as a service with a runner
+// so it is started/stopped.
+func NewDefaultHealthCheckerService(r *RunnerWithRegistry, mr metrics.Registry) (*HealthChecker, error) {
+	hc, err := NewDefaultHealthChecker(mr)
+	if err != nil {
+		return nil, err
+	}
+	r.Add(hc)
+	return hc, nil
+}
+
+// NewDefaultHealthChecker is a registry constructor function that creates a HealthChecker with sane default if
+// requested from the registry
+func NewDefaultHealthChecker(mr metrics.Registry) (*HealthChecker, error) {
+	return NewHealthChecker(CodeVersion, time.Second*15, mr, NewHealthReportLogger(cue.NewLogger("health"), CodeVersion)), nil
+}
+
 // NewHealthChecker creates new Healthchecker, given a code version, in what interval registered checks should be executed and a set of listeners if a new HealthReport is available
 func NewHealthChecker(version string, pollInterval time.Duration, registry metrics.Registry, listeners ...HealthReportListener) (p *HealthChecker) {
 	h := &HealthChecker{
@@ -69,9 +87,20 @@ func (h *HealthChecker) AddListener(l HealthReportListener) {
 	h.listeners = append(h.listeners, l)
 }
 
-// Run starts healthcheck loop.
+// temp to comply with service interface
+func (h *HealthChecker) Init() error {
+	h.run()
+	return nil
+}
+
+// temp to comply with service interface
+func (h *HealthChecker) Shutdown(os.Signal) {
+	h.Close()
+}
+
+// run starts healthcheck loop.
 // This method can be safely called multiple times.
-func (h *HealthChecker) Run() {
+func (h *HealthChecker) run() {
 	if atomic.LoadInt32(&h.closing) == 1 || atomic.LoadInt32(&h.running) == 1 {
 		return
 	}

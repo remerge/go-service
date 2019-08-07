@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/remerge/cue"
@@ -10,13 +11,32 @@ import (
 	env "github.com/remerge/go-env"
 )
 
-func setLogFormat(debug bool) {
-	level := cue.INFO
+var termCollector cue.Collector
 
-	if debug {
-		level = cue.DEBUG
+func setLogLevel(l cue.Level) {
+	cue.SetLevel(l, termCollector)
+}
+
+func setLogLevelFrom(l string) {
+	var lvl cue.Level
+	switch strings.ToLower(l) {
+	case "debug":
+		lvl = cue.DEBUG
+	case "info":
+		lvl = cue.INFO
+	case "warn":
+		lvl = cue.WARN
+	case "error":
+		lvl = cue.ERROR
+	case "fatal":
+		lvl = cue.FATAL
+	case "off":
+		lvl = cue.OFF
 	}
+	setLogLevel(lvl)
+}
 
+func initLogCollector() {
 	formatter := format.Formatf(
 		"%v [%v:%v] %v",
 		format.Level,
@@ -35,9 +55,11 @@ func setLogFormat(debug bool) {
 		)
 	}
 
-	cue.Collect(level, collector.Terminal{
+	termCollector = collector.Terminal{
 		Formatter: formatter,
-	}.New())
+	}.New()
+
+	cue.Collect(cue.INFO, termCollector)
 }
 
 type saramaLoggerWrapper struct {

@@ -5,7 +5,7 @@ import (
 	"runtime/pprof"
 	"time"
 
-	"github.com/rcrowley/go-metrics"
+	metrics "github.com/rcrowley/go-metrics"
 	lft "github.com/remerge/go-lock_free_timer"
 )
 
@@ -251,21 +251,21 @@ func registerRuntimeMemStats(r metrics.Registry) {
 		runtimeMetrics.ReadMemStats)
 }
 
-// nolint: unparam
-func (s *Executor) flushMetrics(freq time.Duration) {
-	registerRuntimeMemStats(s.metricsRegistry)
-	go captureRuntimeMemStats(freq, s.stopC)
+func (b *Base) runMetricsFlusher(freq time.Duration, closeChan <-chan struct{}) {
+	// TODO: this is iritating as it is called flush but actually does some setup code
+	registerRuntimeMemStats(b.metricsRegistry)
+	go captureRuntimeMemStats(freq, closeChan)
 
 	ticker := time.NewTicker(freq)
 	defer ticker.Stop()
 
 	for {
 		select {
-		case <-s.stopC:
+		case <-closeChan:
 			return
 		case <-ticker.C:
-			if flushErr := s.promMetrics.Update(); flushErr != nil {
-				s.Log.Warnf("failures while collect metrics: %v", flushErr)
+			if err := b.promMetrics.Update(); err != nil {
+				b.Log.Warnf("failures while collect metrics: %v", err)
 			}
 		}
 	}

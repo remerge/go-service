@@ -2,16 +2,13 @@ sudo: false
 language: go
 
 go:
-- "1.11.11"
+- "1.12.7"
 
 cache:
   directories:
   - $GOPATH/pkg/mod
   - $GOPATH/bin
   - $HOME/.cache/go-build
-
-before_install:
-  - docker-compose up -d  
 
 branches:
   only:
