@@ -10,7 +10,7 @@ import (
 )
 
 type Registrar interface {
-	Register(ctor interface{}) (func(...interface{}) (interface{}, error), error)
+	Register(interface{}, ...interface{}) (func(...interface{}) (interface{}, error), error)
 }
 
 // Registry is used to register service  constructors and instantiate the services.
