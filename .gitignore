@@ -1,5 +1,4 @@
-vendor
+.tools
 service
 cache
 main/main
-go.sum
