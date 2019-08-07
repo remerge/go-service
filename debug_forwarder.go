@@ -114,7 +114,7 @@ func (f *debugForwader) Init() error {
 	return nil
 }
 
-func (f *debugForwader) Shutdown(sig os.Signal) {
+func (f *debugForwader) Shutdown(os.Signal) {
 	if f == nil {
 		return
 	}

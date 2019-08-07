@@ -70,8 +70,8 @@ func (slw *saramaLoggerWrapper) Print(v ...interface{}) {
 	slw.logger.Info(fmt.Sprint(v...))
 }
 
-func (slw *saramaLoggerWrapper) Printf(format string, v ...interface{}) {
-	slw.logger.Info(fmt.Sprintf(format, v...))
+func (slw *saramaLoggerWrapper) Printf(f string, v ...interface{}) {
+	slw.logger.Info(fmt.Sprintf(f, v...))
 }
 
 func (slw *saramaLoggerWrapper) Println(v ...interface{}) {

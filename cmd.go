@@ -14,7 +14,10 @@ type InitFnc func(*RunnerWithRegistry)
 
 var logLevelString string
 
-// TODO: add description
+// Cmd wraps a init function with service setup code
+// - create a service registry and a runner
+// - registered all Base services
+// - creates the base cobra Cmd
 func Cmd(name string, initFnc InitFnc) *cobra.Command {
 	initLogCollector()
 	setLogLevelFrom(parseLogLevelFlat())
@@ -45,23 +48,19 @@ func Cmd(name string, initFnc InitFnc) *cobra.Command {
 		},
 	})
 
-	// TODO: should we always do this?
 	r := NewRunnerWithRegistry()
-	r.Register(func() (*cobra.Command, error) {
-		return cmd, nil
-	})
 	// so services can register themselves for execution
 	r.Register(func() (*RunnerWithRegistry, error) {
 		return r, nil
 	})
+	r.Register(func() (*cobra.Command, error) {
+		return cmd, nil
+	})
 	RegisterBase(r.Registry, name)
 	initFnc(r)
 
-	cmd.Run = func(cmd *cobra.Command, args []string) {
-		if err := r.Run(); err != nil {
-			log := NewLogger("cmd")
-			log.Panic(err, "service execution failed")
-		}
+	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		return r.Run()
 	}
 
 	return cmd

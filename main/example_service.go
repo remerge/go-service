@@ -23,13 +23,6 @@ func (s *ExampleService) Shutdown(os.Signal) {
 
 var rootCmd = service.Cmd("example", Init)
 
-func Execute() {
-	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-}
-
 func Init(r *service.RunnerWithRegistry) {
 	// without any requirements:
 	// s := &ExampleService{}
@@ -43,5 +36,8 @@ func Init(r *service.RunnerWithRegistry) {
 }
 
 func main() {
-	Execute()
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 }
