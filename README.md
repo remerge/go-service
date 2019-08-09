@@ -16,5 +16,4 @@ go get github.com/remerge/go-service
 3. You can add tracker or server to service executor (or both)
 
 * Executor can be used in an implicit composition
-* You can check out very simple example [in main folder](main/service.go)
-* Or example [with server](main/with_server.go)
+* You can check out very simple example [in main folder](https://github.com/remerge/go-service/blob/master/main/example_service.go)
