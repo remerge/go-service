@@ -59,6 +59,7 @@ func Cmd(name string, initFnc InitFnc) *cobra.Command {
 	RegisterBase(r.Registry, name)
 	initFnc(r)
 
+	cmd.SilenceUsage = true
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		return r.Run()
 	}

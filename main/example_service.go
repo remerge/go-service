@@ -26,6 +26,7 @@ var rootCmd = service.Cmd("example", Init)
 func Init(r *service.RunnerWithRegistry) {
 	// without any requirements:
 	// s := &ExampleService{}
+
 	s := service.MustCreate(r.Register(func(cmd *cobra.Command) (*ExampleService, error) {
 		return &ExampleService{}, nil
 	})).(*ExampleService)

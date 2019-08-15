@@ -62,6 +62,66 @@ func TestServiceRegistry(t *testing.T) {
 		assert.NotPanics(t, func() { _ = target.A.(*A) })
 	})
 
+	t.Run("ctor with interface target returning implementor", func(t *testing.T) {
+		r := New()
+
+		assert.NoError(t, register(r, func() (*A, error) {
+			return &A{}, nil
+		}))
+
+		type Target struct {
+			A IA
+		}
+		target := &Target{}
+
+		require.NoError(t, r.RequestAndSet(&target.A))
+		assert.NotNil(t, target.A)
+		assert.NotPanics(t, func() { _ = target.A.(*A) })
+	})
+
+	t.Run("ctor with interface parameter", func(t *testing.T) {
+		r := New()
+
+		type B struct {
+			I IA
+		}
+
+		assert.NoError(t, register(r, func() (*A, error) {
+			return &A{}, nil
+		}))
+		assert.NoError(t, register(r, func(ia IA) (*B, error) {
+			return &B{ia}, nil
+		}))
+
+		type Target struct {
+			B *B
+		}
+		target := &Target{}
+		require.NoError(t, r.RequestAndSet(&target.B))
+		assert.NotNil(t, target.B.I)
+		assert.NotPanics(t, func() { target.B.I.M() })
+	})
+	t.Run("ctor with interface parameter fails if two types implement same interface", func(t *testing.T) {
+		r := New()
+
+		type B struct {
+			IA
+		}
+
+		assert.NoError(t, register(r, func() (*A, error) {
+			return &A{}, nil
+		}))
+		assert.NoError(t, register(r, func(ia IA) (*B, error) {
+			return &B{ia}, nil
+		}))
+
+		type Target struct {
+			B *B
+		}
+		target := &Target{}
+		require.Error(t, r.RequestAndSet(&target.B))
+	})
+
 	t.Run("ctor with multiple deep dependencies", func(t *testing.T) {
 		r := New()
 

@@ -162,6 +162,16 @@ func (r *Registry) providerFor(t reflect.Type) (*provider, error) {
 	r.log.Debugf("requesting provider for %v", t)
 	provider, found := r.providers[t]
 	if !found {
+		p, err := r.findProviderForInterface(t)
+		if err != nil {
+			return nil, err
+		}
+		if p != nil {
+			r.log.Debugf("%v is an interface provided by %v", t, p.provides)
+		}
+		provider = p
+	}
+	if provider == nil {
 		return nil, fmt.Errorf("no provider for %v", t)
 	}
 	return provider, nil
@@ -192,6 +202,16 @@ func (r *Registry) resolve(p *provider, extraParams []interface{}) error {
 		r.log.Debugf("walking requires for %v require=%v extraParams=%v", p.ctor.Type(), t, extraParams)
 		provider, found := r.providers[t]
 		if !found {
+			r.log.Debugf("no direct provider for %v, is interface=%t (kind=%v)", t, t.Kind() == reflect.Interface, t.Kind())
+			// t might be an interface, lets scan all provider - maybe there is one that implements it?
+			var err error
+			provider, err = r.findProviderForInterface(t)
+			if err != nil {
+				return err
+			}
+		}
+		if provider == nil {
+			// t was not an interface or no provided type implements t
 			// we support top level direct params, but they need to map exactly (order and types)!
 			// this is a special case and we will terminate the loop for this
 			if !exactSubSignatureMatch(p.ctor.Type(), idx, extraParams) {
@@ -200,7 +220,6 @@ func (r *Registry) resolve(p *provider, extraParams []interface{}) error {
 			r.log.Infof("exact subtype match %v idx=%v extraParams=%v", p.ctor.Type(), idx, extraParams)
 			filteredExtraParams = extraParams
 			break
-
 		}
 		if err := r.resolve(provider, extraParams); err != nil {
 			return err
@@ -215,6 +234,25 @@ func (r *Registry) resolve(p *provider, extraParams []interface{}) error {
 	r.log.Debugf("filtered extra params are %v ", filteredExtraParams)
 
 	return r.instantiate(p, params)
+}
+
+func (r *Registry) findProviderForInterface(t reflect.Type) (p *provider, err error) {
+	if t.Kind() != reflect.Interface {
+		return nil, nil
+	}
+	var implementor reflect.Type
+	for providedType, provider := range r.providers {
+		// r.log.Debugf("%v implements %v = %t", providedType, t, providedType.Implements(t))
+		if providedType.Implements(t) {
+			if implementor != nil {
+				// we only support one type implementing a interface parameter per registry
+				return nil, fmt.Errorf("can not pick corect implementor. Multiple types(%v and %v) implement the requested interface %v", implementor, providedType, t)
+			}
+			implementor = providedType
+			p = provider
+		}
+	}
+	return p, nil
 }
 
 func mapToValue(values []interface{}) (r []reflect.Value) {

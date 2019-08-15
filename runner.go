@@ -86,11 +86,14 @@ func (r *Runner) Run() (err error) {
 	var inited []*runnable
 
 	defer func() {
-		reversed := reverseServices(inited)
+		var shutdownErr error
+		if len(inited) > 0 {
+			reversed := reverseServices(inited)
 
-		r.log.Infof("shutting down services in order: %s", joinedServiceNames(reversed))
+			r.log.Infof("shutting down services in order: %s", joinedServiceNames(reversed))
 
-		shutdownErr := r.shutdownServices(reversed, sig)
+			shutdownErr = r.shutdownServices(reversed, sig)
+		}
 
 		if r.PostShutdown != nil {
 			r.PostShutdown(shutdownErr)
@@ -108,6 +111,7 @@ func (r *Runner) Run() (err error) {
 	r.log.Infof("service start result err=%v signal=%v started=%s", err, sig, joinedServiceNames(inited))
 
 	if err != nil {
+
 		// if one service failed to init, we return and shutdown tthe inited
 		return errors.Wrap(err, "error during startup")
 	}

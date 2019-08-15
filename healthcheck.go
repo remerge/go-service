@@ -16,6 +16,12 @@ type HealthCheckable interface {
 	Healthy() error
 }
 
+type HealthCheckRegistry interface {
+	AddCheck(string, interface {
+		Healthy() error
+	})
+}
+
 // CheckHealth can be used to wrap functions so they fulfill the HealthCheckable interface
 type CheckHealth func() error
 
@@ -120,7 +126,9 @@ func (h *HealthChecker) Close() error {
 }
 
 // AddCheck registers new check by name unless it was registered before
-func (h *HealthChecker) AddCheck(name string, checkable HealthCheckable) {
+func (h *HealthChecker) AddCheck(name string, checkable interface {
+	Healthy() error
+}) {
 	if atomic.LoadInt32(&h.closing) == 1 {
 		return
 	}
