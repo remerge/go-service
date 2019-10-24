@@ -217,7 +217,7 @@ func (r *Registry) resolve(p *provider, extraParams []interface{}) error {
 			if !exactSubSignatureMatch(p.ctor.Type(), idx, extraParams) {
 				return fmt.Errorf("no provider for %v (and no exact signature match)", t)
 			}
-			r.log.Infof("exact subtype match %v idx=%v extraParams=%v", p.ctor.Type(), idx, extraParams)
+			r.log.Debugf("exact subtype match %v idx=%v extraParams=%v", p.ctor.Type(), idx, extraParams)
 			filteredExtraParams = extraParams
 			break
 		}
