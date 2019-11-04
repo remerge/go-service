@@ -215,7 +215,7 @@ func (r *Registry) resolve(p *provider, extraParams []interface{}) error {
 			// we support top level direct params, but they need to map exactly (order and types)!
 			// this is a special case and we will terminate the loop for this
 			if !exactSubSignatureMatch(p.ctor.Type(), idx, extraParams) {
-				return fmt.Errorf("no provider for %v (and no exact signature match)", t)
+				return fmt.Errorf("no provider for %v (and no exact signature match), required by %v", t, p.ctor.Type())
 			}
 			r.log.Debugf("exact subtype match %v idx=%v extraParams=%v", p.ctor.Type(), idx, extraParams)
 			filteredExtraParams = extraParams
