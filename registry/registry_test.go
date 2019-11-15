@@ -221,23 +221,64 @@ func TestServiceRegistry(t *testing.T) {
 		r := New()
 
 		type A struct{}
+		type Extra struct{ Int int }
 		type B struct {
 			*A
 			String string
 			Int    int
+			Extra  *Extra // extra non primitive objects work as well
 		}
 
 		assert.NoError(t, register(r, func() (*A, error) { return &A{}, nil }))
-		assert.NoError(t, register(r, func(a *A, i int, s string) (*B, error) { return &B{A: a, Int: i, String: s}, nil }))
+		assert.NoError(t, register(r, func(a *A, i int, s string, extra *Extra) (*B, error) {
+			return &B{A: a, Int: i, String: s, Extra: extra}, nil
+		}))
 
 		type Target struct{ *B }
 		target := &Target{}
 
-		assert.NoError(t, r.RequestAndSet(&target.B, 42, "hallo"))
+		assert.NoError(t, r.RequestAndSet(&target.B, 42, "hallo", &Extra{Int: 123}))
 		require.NotNil(t, target.B)
 		require.NotNil(t, target.B.A)
+		require.NotNil(t, target.B.Extra)
 		require.Equal(t, target.B.String, "hallo")
 		require.Equal(t, target.B.Int, 42)
+		require.Equal(t, target.B.Extra.Int, 123)
+	})
+
+	t.Run("ctor with request stage extra parameters provided by a function", func(t *testing.T) {
+		r := New()
+
+		type Log struct {
+			Id int
+		}
+		type A struct{}
+		type Extra struct {
+			Int int
+		}
+		type B struct {
+			*A
+			Extra *Extra
+		}
+
+		assert.NoError(t, register(r, func() (*Log, error) { return &Log{Id: 123}, nil }))
+		assert.NoError(t, register(r, func() (*A, error) { return &A{}, nil }))
+		assert.NoError(t, register(r, func(a *A, extra *Extra) (*B, error) {
+			return &B{A: a, Extra: extra}, nil
+		}))
+
+		type Target struct{ *B }
+		target := &Target{}
+
+		f := func(log *Log) *Extra {
+			return &Extra{Int: log.Id}
+		}
+
+		assert.NoError(t, r.RequestAndSet(&target.B, f))
+		require.NotNil(t, target.B)
+		require.NotNil(t, target.B.A)
+		require.NotNil(t, target.B.Extra)
+		require.Equal(t, target.B.Extra.Int, 123)
 	})
 
 	t.Run("ctor with request stage param object", func(t *testing.T) {
