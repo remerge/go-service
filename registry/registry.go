@@ -396,7 +396,7 @@ func exactSubSignatureMatch(ctorType reflect.Type, idx int, params []interface{}
 	}
 	for i := idx; i < ctorType.NumIn(); i++ {
 		typeOfParam := reflect.TypeOf(params[i-idx])
-		// we allow function matches that retunr the right type
+		// we allow function matches that return the right type
 		if typeOfParam.Kind() == reflect.Func {
 			if typeOfParam.NumOut() != 1 {
 				return false
