@@ -213,11 +213,31 @@ func (r *Registry) resolve(p *provider, extraParams []interface{}) error {
 		if provider == nil {
 			// t was not an interface or no provided type implements t
 			// we support top level direct params, but they need to map exactly (order and types)!
+			// instead of a type a function that returns the type is supported as well and will be called
 			// this is a special case and we will terminate the loop for this
 			if !exactSubSignatureMatch(p.ctor.Type(), idx, extraParams) {
 				return fmt.Errorf("no provider for %v (and no exact signature match), required by %v", t, p.ctor.Type())
 			}
 			r.log.Debugf("exact subtype match %v idx=%v extraParams=%v", p.ctor.Type(), idx, extraParams)
+			// we might have one that is a function, replace it with its value
+			for i, param := range extraParams {
+				typeOfParam := reflect.TypeOf(param)
+				if typeOfParam.Kind() == reflect.Func {
+					// any parameters that we mave a provider for?
+					var paramsForFunc []reflect.Value
+					for paramIdx := 0; paramIdx < typeOfParam.NumIn(); paramIdx++ {
+						// can we resolve this type?
+						funcParamType := typeOfParam.In(paramIdx)
+						instance, err := r.Request(funcParamType)
+						if err != nil {
+							return fmt.Errorf("instance request failed for %v (required as function argument during exact sub signature match by %v)", funcParamType, typeOfParam)
+						}
+						paramsForFunc = append(paramsForFunc, reflect.ValueOf(instance))
+					}
+
+					extraParams[i] = reflect.ValueOf(param).Call(paramsForFunc)[0].Interface()
+				}
+			}
 			filteredExtraParams = extraParams
 			break
 		}
@@ -375,7 +395,15 @@ func exactSubSignatureMatch(ctorType reflect.Type, idx int, params []interface{}
 		return false
 	}
 	for i := idx; i < ctorType.NumIn(); i++ {
-		if ctorType.In(i) != reflect.TypeOf(params[i-idx]) {
+		typeOfParam := reflect.TypeOf(params[i-idx])
+		// we allow function matches that return the right type
+		if typeOfParam.Kind() == reflect.Func {
+			if typeOfParam.NumOut() != 1 {
+				return false
+			}
+			typeOfParam = typeOfParam.Out(0)
+		}
+		if ctorType.In(i) != typeOfParam {
 			return false
 		}
 	}
