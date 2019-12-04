@@ -47,14 +47,15 @@ func (f *debugForwader) configureFlags(cmd *cobra.Command) {
 }
 
 type debugForwader struct {
-	sync.Mutex
 	Port      int
-	conns     sync.Map
+	connsLock sync.RWMutex
+	conns     map[string]*debugConn
 	connCount uint32
 	connLn    net.Listener
 	log       cue.Logger
 	quit      chan bool
 	exited    chan bool
+	closing   uint32
 }
 
 type debugConn struct {
@@ -63,6 +64,7 @@ type debugConn struct {
 	closeWait sync.WaitGroup
 	msgs      chan []byte
 	forwarder *debugForwader
+	closing   uint32
 }
 
 func (f *debugForwader) Init() error {
@@ -106,7 +108,9 @@ func (f *debugForwader) Init() error {
 					msgs:      make(chan []byte, 1024),
 				}
 				dc.closeWait.Add(1)
-				f.conns.Store(c.RemoteAddr().String(), dc)
+				f.connsLock.Lock()
+				f.conns[c.RemoteAddr().String()] = dc
+				f.connsLock.Unlock()
 				go dc.loop()
 			}
 		}
@@ -118,17 +122,23 @@ func (f *debugForwader) Shutdown(os.Signal) {
 	if f == nil {
 		return
 	}
+	atomic.StoreUint32(&f.closing, 1)
 	close(f.quit)
 	<-f.exited
 	if f.connLn != nil {
 		f.connLn.Close()
 	}
-
-	f.conns.Range(func(k, v interface{}) bool {
-		c := v.(*debugConn)
+	f.connsLock.Lock()
+	// a bit ugly but closeAndWait tries to lock the map as well in remove
+	var toClose []*debugConn
+	for k, c := range f.conns {
+		toClose = append(toClose, c)
+		f.removeUnsafe(k)
+	}
+	f.connsLock.Unlock()
+	for _, c := range toClose {
 		c.closeAndWait()
-		return true
-	})
+	}
 }
 
 func (f *debugForwader) hasOpenConnections() bool {
@@ -145,25 +155,33 @@ func (f *debugForwader) forward(data []byte) {
 	if atomic.LoadUint32(&f.connCount) == 0 {
 		return
 	}
-	f.conns.Range(func(k, v interface{}) bool {
-		c := v.(*debugConn)
+	if atomic.LoadUint32(&f.closing) != 0 {
+		return
+	}
+	f.connsLock.RLock()
+
+	for _, c := range f.conns {
 		select {
 		case c.msgs <- data:
 		default:
 			// TODO: log that debug conn can't keep up with the speed
 		}
-		return true
-	})
+	}
+	f.connsLock.RUnlock()
+}
+
+func (f *debugForwader) removeUnsafe(k string) {
+	if _, found := f.conns[k]; found {
+		f.log.WithFields(cue.Fields{"source": k}).Info("debug connection closed")
+		delete(f.conns, k)
+		atomic.AddUint32(&f.connCount, ^uint32(0))
+	}
 }
 
 func (f *debugForwader) remove(k string) {
-	f.Lock()
-	if _, ok := f.conns.Load(k); ok {
-		f.log.WithFields(cue.Fields{"source": k}).Info("debug connection closed")
-		f.conns.Delete(k)
-		atomic.AddUint32(&f.connCount, ^uint32(0))
-	}
-	f.Unlock()
+	f.connsLock.Lock()
+	f.removeUnsafe(k)
+	f.connsLock.Unlock()
 }
 
 func (c *debugConn) Close() {
