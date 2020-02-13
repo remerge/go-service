@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -32,6 +33,8 @@ type Server struct {
 		Key    string
 		Server *graceful.Server
 	}
+
+	requestsWg sync.WaitGroup
 }
 
 type ServerConfig struct {
@@ -101,6 +104,7 @@ func (s *Server) Init() error {
 	gin.SetMode("release")
 	s.Engine = gin.New()
 	s.Engine.Use(
+		ginRequestsWaiter(&s.requestsWg),
 		ginRecovery(s.Name),
 		ginLogger(s.Name),
 	)
@@ -120,6 +124,18 @@ func (s *Server) Shutdown(os.Signal) {
 		s.log.Info("server shutdown")
 		serverChan = s.Server.StopChan()
 		s.Server.Stop(s.ShutdownTimeout)
+	}
+
+	allRequestsServedChan := make(chan struct{})
+	go func() {
+		s.requestsWg.Wait()
+		close(allRequestsServedChan)
+	}()
+	select {
+	case <-allRequestsServedChan:
+		s.log.Info("all requests processed")
+	case <-time.After(s.ShutdownTimeout):
+		_ = s.log.Error(fmt.Errorf("shutdown timeout reached"), "remained unprocessed requests")
 	}
 
 	if s.TLS.Server != nil {

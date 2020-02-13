@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -51,6 +52,14 @@ func ginRecovery(name string) gin.HandlerFunc {
 			})
 		}()
 
+		c.Next()
+	}
+}
+
+func ginRequestsWaiter(wg *sync.WaitGroup) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		wg.Add(1)
+		defer wg.Done()
 		c.Next()
 	}
 }
