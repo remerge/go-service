@@ -2,7 +2,9 @@ package service
 
 import (
 	"fmt"
+	"net/http"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -56,10 +58,16 @@ func ginRecovery(name string) gin.HandlerFunc {
 	}
 }
 
-func ginRequestsWaiter(wg *sync.WaitGroup) gin.HandlerFunc {
+func ginRequestsWaiter(name string, wg *sync.WaitGroup, closing *uint32) gin.HandlerFunc {
+	log := NewLogger(name)
 	return func(c *gin.Context) {
+		if atomic.LoadUint32(closing) == 1 {
+			log.Warn("accepted request after closing")
+			c.AbortWithStatus(http.StatusServiceUnavailable)
+			return
+		}
 		wg.Add(1)
-		defer wg.Done()
 		c.Next()
+		wg.Done()
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -35,6 +36,7 @@ type Server struct {
 	}
 
 	requestsWg sync.WaitGroup
+	closing    uint32
 }
 
 type ServerConfig struct {
@@ -104,7 +106,7 @@ func (s *Server) Init() error {
 	gin.SetMode("release")
 	s.Engine = gin.New()
 	s.Engine.Use(
-		ginRequestsWaiter(&s.requestsWg),
+		ginRequestsWaiter(s.Name, &s.requestsWg, &s.closing),
 		ginRecovery(s.Name),
 		ginLogger(s.Name),
 	)
@@ -126,18 +128,6 @@ func (s *Server) Shutdown(os.Signal) {
 		s.Server.Stop(s.ShutdownTimeout)
 	}
 
-	allRequestsServedChan := make(chan struct{})
-	go func() {
-		s.requestsWg.Wait()
-		close(allRequestsServedChan)
-	}()
-	select {
-	case <-allRequestsServedChan:
-		s.log.Info("all requests processed")
-	case <-time.After(s.ShutdownTimeout):
-		_ = s.log.Error(fmt.Errorf("shutdown timeout reached"), "remained unprocessed requests")
-	}
-
 	if s.TLS.Server != nil {
 		<-tlsServerChan
 		s.log.Info("tls server shutdown complete")
@@ -148,6 +138,19 @@ func (s *Server) Shutdown(os.Signal) {
 		<-serverChan
 		s.log.Info("server shutdown complete")
 		s.Server = nil
+	}
+
+	atomic.StoreUint32(&s.closing, 1)
+	allRequestsServedChan := make(chan struct{})
+	go func() {
+		s.requestsWg.Wait()
+		close(allRequestsServedChan)
+	}()
+	select {
+	case <-allRequestsServedChan:
+		s.log.Info("all requests processed")
+	case <-time.After(s.ShutdownTimeout):
+		_ = s.log.Error(fmt.Errorf("shutdown timeout reached"), "remained unprocessed requests")
 	}
 }
 
