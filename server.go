@@ -2,6 +2,8 @@ package service
 
 import (
 	"fmt"
+	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"sync"
@@ -15,6 +17,8 @@ import (
 	"github.com/remerge/cue"
 	"github.com/remerge/go-service/registry"
 )
+
+var discardLog = log.New(ioutil.Discard, "", 0)
 
 type Server struct {
 	Name string
@@ -163,8 +167,9 @@ func (s *Server) Serve(handler http.Handler) {
 		Timeout:          s.ShutdownTimeout,
 		NoSignalHandling: true,
 		Server: &http.Server{
-			Handler: handler,
-			Addr:    fmt.Sprintf(":%d", s.Port),
+			Handler:  handler,
+			Addr:     fmt.Sprintf(":%d", s.Port),
+			ErrorLog: discardLog,
 		},
 	}
 
@@ -189,8 +194,9 @@ func (s *Server) ServeTLS(handler http.Handler) {
 	s.TLS.Server = &graceful.Server{
 		Timeout: s.ShutdownTimeout,
 		Server: &http.Server{
-			Handler: handler,
-			Addr:    fmt.Sprintf(":%d", s.TLS.Port),
+			Handler:  handler,
+			Addr:     fmt.Sprintf(":%d", s.TLS.Port),
+			ErrorLog: discardLog,
 		},
 		NoSignalHandling: true,
 	}
