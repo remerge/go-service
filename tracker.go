@@ -86,3 +86,16 @@ func (t *Tracker) Shutdown(os.Signal) {
 		t.Tracker.Close()
 	}
 }
+
+// These methods provide compliance with userdb.ServiceTracker interface
+func (t *Tracker) GetTracker() gotracker.Tracker {
+	return t.Tracker
+}
+
+func (t *Tracker) GetConnect() string {
+	return t.Connect
+}
+
+func (t *Tracker) GetEventMetadata() gotracker.EventMetadata {
+	return t.EventMetadata
+}
