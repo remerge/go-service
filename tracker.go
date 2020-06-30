@@ -7,7 +7,6 @@ import (
 
 	env "github.com/remerge/go-env"
 	"github.com/remerge/go-tools/fqdn"
-	"github.com/remerge/go-tracker"
 	gotracker "github.com/remerge/go-tracker"
 
 	"github.com/spf13/cobra"
@@ -89,7 +88,7 @@ func (t *Tracker) Shutdown(os.Signal) {
 }
 
 // These methods provide compliance with userdb.ServiceTracker interface
-func (t *Tracker) GetTracker() tracker.Tracker {
+func (t *Tracker) GetTracker() gotracker.Tracker {
 	return t.Tracker
 }
 
