@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/felixge/fgprof"
 	"github.com/gin-gonic/gin"
 	metrics "github.com/rcrowley/go-metrics"
 	"github.com/rcrowley/go-metrics/exp"
@@ -110,6 +111,8 @@ func (s *debugServer) serveDebug() {
 	s.Engine.GET("/pprof/trace", gin.WrapF(pprof.Trace))
 	s.Engine.GET("/pprof/mutex", gin.WrapH(pprof.Handler("mutex")))
 	s.Engine.GET("/pprof/allocs", gin.WrapH(pprof.Handler("allocs")))
+
+	s.Engine.GET("/fgprof", gin.WrapH(fgprof.Handler()))
 
 	s.Engine.GET("/blockprof/:rate", func(c *gin.Context) {
 		r, err := strconv.Atoi(c.Param("rate"))
