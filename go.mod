@@ -2,30 +2,25 @@ module github.com/remerge/go-service
 
 require (
 	cloud.google.com/go v0.56.0
-	github.com/Shopify/sarama v0.0.0-20180507145726-3c763ff04e6d
-	github.com/Shopify/toxiproxy v2.1.4+incompatible // indirect
+	github.com/Shopify/sarama v1.24.1
 	github.com/d4l3k/messagediff v1.2.1
 	github.com/eapache/go-resiliency v1.2.0 // indirect
-	github.com/eapache/go-xerial-snappy v0.0.0-20180814174437-776d5712da21 // indirect
-	github.com/eapache/queue v1.1.0 // indirect
 	github.com/felixge/fgprof v0.9.1
 	github.com/frankban/quicktest v1.10.0 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/gin-gonic/gin v0.0.0-20180512030042-bf7803815b0b
 	github.com/golang/protobuf v1.4.2 // indirect
-	github.com/golang/snappy v0.0.1 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.9 // indirect
 	github.com/mattn/go-isatty v0.0.12 // indirect
 	github.com/pierrec/lz4 v2.5.2+incompatible // indirect
 	github.com/pkg/errors v0.8.0
-	github.com/rcrowley/go-metrics v0.0.0-20180503174638-e2704e165165
+	github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a
 	github.com/remerge/cue v0.0.0-20180404154012-5ce627d813ef
 	github.com/remerge/go-env v0.0.0-20180212143913-0274550cec6b
 	github.com/remerge/go-lock_free_timer v0.0.0-20181129173822-9894c16a08a7
-	github.com/remerge/go-timestr v0.0.0-20191106144729-a4e479cf4a76 // indirect
 	github.com/remerge/go-tools v0.0.0-20190620185504-01d771328c35
-	github.com/remerge/go-tracker v0.0.0-20180417095915-e9f519cc25f1
+	github.com/remerge/go-tracker v0.0.0-20201111105100-2f9b34318f5f
 	github.com/spf13/cobra v0.0.3
 	github.com/spf13/pflag v1.0.1
 	github.com/stretchr/testify v1.4.0
