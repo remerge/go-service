@@ -8,12 +8,12 @@ require (
 	github.com/eapache/go-resiliency v1.2.0 // indirect
 	github.com/eapache/go-xerial-snappy v0.0.0-20180814174437-776d5712da21 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
+	github.com/felixge/fgprof v0.9.1
 	github.com/frankban/quicktest v1.10.0 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/gin-gonic/gin v0.0.0-20180512030042-bf7803815b0b
 	github.com/golang/protobuf v1.4.2 // indirect
 	github.com/golang/snappy v0.0.1 // indirect
-	github.com/google/pprof v0.0.0-20200507031123-427632fa3b1c // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.9 // indirect
 	github.com/mattn/go-isatty v0.0.12 // indirect
