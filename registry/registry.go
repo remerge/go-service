@@ -107,11 +107,11 @@ func (r *Registry) Register(ctor interface{}, args ...interface{}) (func(...inte
 // targetType is the type of the requested object
 // params can be used to pass additional parameter structs.
 func (r *Registry) Request(targetType reflect.Type, params ...interface{}) (interface{}, error) {
-	provider, err := r.providerFor(targetType)
+	p, err := r.providerFor(targetType)
 	if err != nil {
 		return nil, err
 	}
-	return r.interfaceFor(provider, params)
+	return r.interfaceFor(p, params)
 }
 
 // RequestAndSet resolves a dependency tree of a given target and sets up all objects on the way.
@@ -160,21 +160,21 @@ func (r *Registry) interfaceFor(p *provider, params []interface{}) (interface{},
 
 func (r *Registry) providerFor(t reflect.Type) (*provider, error) {
 	r.log.Debugf("requesting provider for %v", t)
-	provider, found := r.providers[t]
+	p, found := r.providers[t]
 	if !found {
-		p, err := r.findProviderForInterface(t)
+		pi, err := r.findProviderForInterface(t)
 		if err != nil {
 			return nil, err
 		}
-		if p != nil {
-			r.log.Debugf("%v is an interface provided by %v", t, p.provides)
+		if pi != nil {
+			r.log.Debugf("%v is an interface provided by %v", t, pi.provides)
 		}
-		provider = p
+		p = pi
 	}
-	if provider == nil {
+	if p == nil {
 		return nil, fmt.Errorf("no provider for %v", t)
 	}
-	return provider, nil
+	return p, nil
 }
 
 // resolve is recursive - it doesn't build a proper graph at the moment
@@ -200,17 +200,17 @@ func (r *Registry) resolve(p *provider, extraParams []interface{}) error {
 
 	for idx, t := range p.requires {
 		r.log.Debugf("walking requires for %v require=%v extraParams=%v", p.ctor.Type(), t, extraParams)
-		provider, found := r.providers[t]
+		provider2, found := r.providers[t]
 		if !found {
 			r.log.Debugf("no direct provider for %v, is interface=%t (kind=%v)", t, t.Kind() == reflect.Interface, t.Kind())
 			// t might be an interface, lets scan all provider - maybe there is one that implements it?
 			var err error
-			provider, err = r.findProviderForInterface(t)
+			provider2, err = r.findProviderForInterface(t)
 			if err != nil {
 				return err
 			}
 		}
-		if provider == nil {
+		if provider2 == nil {
 			// t was not an interface or no provided type implements t
 			// we support top level direct params, but they need to map exactly (order and types)!
 			// instead of a type a function that returns the type is supported as well and will be called
@@ -241,15 +241,15 @@ func (r *Registry) resolve(p *provider, extraParams []interface{}) error {
 			filteredExtraParams = extraParams
 			break
 		}
-		if err := r.resolve(provider, extraParams); err != nil {
+		if err := r.resolve(provider2, extraParams); err != nil {
 			return err
 		}
-		params = append(params, *provider.instance)
+		params = append(params, *provider2.instance)
 	}
 
 	// lets attach all extra params
-	for _, p := range filteredExtraParams {
-		params = append(params, reflect.ValueOf(p))
+	for _, param := range filteredExtraParams {
+		params = append(params, reflect.ValueOf(param))
 	}
 	r.log.Debugf("filtered extra params are %v ", filteredExtraParams)
 
@@ -261,7 +261,7 @@ func (r *Registry) findProviderForInterface(t reflect.Type) (p *provider, err er
 		return nil, nil
 	}
 	var implementor reflect.Type
-	for providedType, provider := range r.providers {
+	for providedType, provider2 := range r.providers {
 		// r.log.Debugf("%v implements %v = %t", providedType, t, providedType.Implements(t))
 		if providedType.Implements(t) {
 			if implementor != nil {
@@ -269,7 +269,7 @@ func (r *Registry) findProviderForInterface(t reflect.Type) (p *provider, err er
 				return nil, fmt.Errorf("can not pick corect implementor. Multiple types(%v and %v) implement the requested interface %v", implementor, providedType, t)
 			}
 			implementor = providedType
-			p = provider
+			p = provider2
 		}
 	}
 	return p, nil
