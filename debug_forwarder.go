@@ -83,12 +83,12 @@ func (f *debugForwader) Init() error {
 				return
 			default:
 				ln.(*net.TCPListener).SetDeadline(time.Now().Add(250 * time.Millisecond))
-				c, err := ln.Accept()
-				if err != nil {
-					if os.IsTimeout(err) {
+				c, err2 := ln.Accept()
+				if err2 != nil {
+					if os.IsTimeout(err2) {
 						break
 					}
-					f.log.Error(err, "failed to accept debug listener connection, terminate loop")
+					f.log.Error(err2, "failed to accept debug listener connection, terminate loop")
 					return
 				}
 				connCount := atomic.LoadUint32(&f.connCount)
