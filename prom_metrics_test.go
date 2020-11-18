@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/rcrowley/go-metrics"
+	lft "github.com/remerge/go-lock_free_timer"
 	"github.com/remerge/go-service"
 	"github.com/stretchr/testify/assert"
 )
@@ -15,8 +16,13 @@ func TestPrometheusMetrics_UpdateWithHistogramAndTimerEvent(t *testing.T) {
 	metrics.GetOrRegisterCounter("app c2", r).Inc(3)
 	metrics.GetOrRegisterGaugeFloat64("app,l1=2 g1", r)
 	metrics.GetOrRegisterGauge("app,l1=1 g1", r)
-	h := metrics.GetOrRegisterHistogram("app,l1=1 h1", r, metrics.NewUniformSample(104))
-	h.Update(42)
+
+	h1 := metrics.GetOrRegisterHistogram("app,l1=1 h1", r, metrics.NewUniformSample(104))
+	h1.Update(42)
+	h2 := metrics.GetOrRegisterHistogram("app,l1=1 h2", r, lft.NewLockFreeSample(1028))
+	h2.Update(1347941549560146)
+	h2.Update(9435590846921021)
+
 	metrics.GetOrRegisterMeter("app,l1=1 m1", r)
 	timer := metrics.GetOrRegisterTimer("app t1", r)
 	timer.Update(time.Second)
@@ -57,6 +63,19 @@ app_h1_min{service="test",l1="1"} 42
 
 # TYPE app_h1_stddev gauge
 app_h1_stddev{service="test",l1="1"} 0
+
+# TYPE app_h2 histogram
+app_h2_count{service="test",l1="1"} 2
+app_h2_sum{service="test",l1="1"} 10783532396481167
+app_h2{service="test",l1="1",le="+Inf"} 2
+app_h2{service="test",l1="1",le="0.000000"} 0
+app_h2{service="test",l1="1",le="1347941549560145.000000"} 0
+app_h2{service="test",l1="1",le="2695883099120290.000000"} 1
+app_h2{service="test",l1="1",le="4043824648680435.000000"} 1
+app_h2{service="test",l1="1",le="5391766198240580.000000"} 1
+app_h2{service="test",l1="1",le="6739707747800725.000000"} 1
+app_h2{service="test",l1="1",le="8087649297360870.000000"} 1
+app_h2{service="test",l1="1",le="9435590846921020.000000"} 2
 
 # TYPE app_m1_total counter
 app_m1_total{service="test",l1="1"} 0

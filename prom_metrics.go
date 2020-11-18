@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/rcrowley/go-metrics"
+	lft_sample "github.com/remerge/go-lock_free_timer/sample"
 )
 
 var (
@@ -155,12 +156,7 @@ func (p *PrometheusMetrics) Update() (err error) {
 			}
 			p.addGauge(mTypes, mValues, name, labels, val)
 		case metrics.Histogram:
-			sn := m1.Snapshot()
-			if sn.Count() == 0 {
-				break
-			}
-
-			p.addSummary(mTypes, mValues, name, labels, sn)
+			p.updateHistogram(mTypes, mValues, name, labels, m1)
 		case metrics.Timer:
 			sn := m1.Snapshot()
 			if sn.Count() == 0 {
@@ -171,6 +167,20 @@ func (p *PrometheusMetrics) Update() (err error) {
 		}
 	})
 	return p.writeData(failures, mTypes, mValues)
+}
+
+func (p *PrometheusMetrics) updateHistogram(mTypes map[string]string, mValues map[string][][2]string, name, labels string, hst metrics.Histogram) {
+	switch sample := hst.Sample().(type) {
+	case lft_sample.LegacyWithBuckets:
+		// Amount of events is not checked here intentionally: a histogram output
+		// with zero values is considered valid
+		p.addBucketHistogramSummary(mTypes, mValues, name, labels, sample)
+	default:
+		sn := hst.Snapshot()
+		if sn.Count() > 0 {
+			p.addSummary(mTypes, mValues, name, labels, sn)
+		}
+	}
 }
 
 func (p *PrometheusMetrics) writeData(failures []string, t map[string]string, v map[string][][2]string) (err error) {
@@ -208,6 +218,19 @@ func (p *PrometheusMetrics) writeData(failures []string, t map[string]string, v 
 		return fmt.Errorf("%v", failures)
 	}
 	return nil
+}
+
+func (p *PrometheusMetrics) addBucketHistogramSummary(t map[string]string, v map[string][][2]string, name, labels string, sampler lft_sample.LegacyWithBuckets) {
+	t[name] = "histogram"
+
+	buckets, values := sampler.BucketsAndValues()
+	for idx := 0; idx < len(buckets); idx++ {
+		p.addV(v, name, p.fullName(name, fmt.Sprintf("%s,le=\"%f\"", labels, buckets[idx])), values[idx])
+	}
+	p.addV(v, name, p.fullName(name, labels+",le=\"+Inf\""), values[len(buckets)])
+
+	p.addV(v, name, p.fullName(name+"_count", labels), sampler.Count())
+	p.addV(v, name, p.fullName(name+"_sum", labels), sampler.Sum())
 }
 
 func (p *PrometheusMetrics) addSummary(t map[string]string, v map[string][][2]string, name, labels string, sampler metricsSampler) {
