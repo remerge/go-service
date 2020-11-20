@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/rcrowley/go-metrics"
+	lft "github.com/remerge/go-lock_free_timer"
 	"github.com/remerge/go-service"
 	"github.com/stretchr/testify/assert"
 )
@@ -15,8 +16,15 @@ func TestPrometheusMetrics_UpdateWithHistogramAndTimerEvent(t *testing.T) {
 	metrics.GetOrRegisterCounter("app c2", r).Inc(3)
 	metrics.GetOrRegisterGaugeFloat64("app,l1=2 g1", r)
 	metrics.GetOrRegisterGauge("app,l1=1 g1", r)
-	h := metrics.GetOrRegisterHistogram("app,l1=1 h1", r, metrics.NewUniformSample(104))
-	h.Update(42)
+
+	h1 := metrics.GetOrRegisterHistogram("app,l1=1 h1", r, metrics.NewUniformSample(104))
+	h1.Update(42)
+	h2 := metrics.GetOrRegisterHistogram("app,l1=1 h2", r, lft.NewLockFreeSampleWithBuckets([]float64{10, 20, 30}))
+	h2.Update(5)
+	h2.Update(15)
+	h2.Update(25)
+	h2.Update(31)
+
 	metrics.GetOrRegisterMeter("app,l1=1 m1", r)
 	timer := metrics.GetOrRegisterTimer("app t1", r)
 	timer.Update(time.Second)
@@ -57,6 +65,35 @@ app_h1_min{service="test",l1="1"} 42
 
 # TYPE app_h1_stddev gauge
 app_h1_stddev{service="test",l1="1"} 0
+
+# TYPE app_h2 summary
+app_h2_count{service="test",l1="1"} 4
+app_h2_sum{service="test",l1="1"} 76
+app_h2{service="test",l1="1",quantile="0.5"} 20
+app_h2{service="test",l1="1",quantile="0.75"} 29.5
+app_h2{service="test",l1="1",quantile="0.95"} 31
+app_h2{service="test",l1="1",quantile="0.99"} 31
+app_h2{service="test",l1="1",quantile="0.999"} 31
+
+# TYPE app_h2_buckets histogram
+app_h2_buckets_count{service="test",l1="1"} 4
+app_h2_buckets_sum{service="test",l1="1"} 76
+app_h2_buckets{service="test",l1="1",le="+Inf"} 3
+app_h2_buckets{service="test",l1="1",le="10.000000"} 1
+app_h2_buckets{service="test",l1="1",le="20.000000"} 2
+app_h2_buckets{service="test",l1="1",le="30.000000"} 3
+
+# TYPE app_h2_max gauge
+app_h2_max{service="test",l1="1"} 31
+
+# TYPE app_h2_mean gauge
+app_h2_mean{service="test",l1="1"} 19
+
+# TYPE app_h2_min gauge
+app_h2_min{service="test",l1="1"} 5
+
+# TYPE app_h2_stddev gauge
+app_h2_stddev{service="test",l1="1"} 9.899494936611665
 
 # TYPE app_m1_total counter
 app_m1_total{service="test",l1="1"} 0

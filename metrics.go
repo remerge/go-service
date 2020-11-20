@@ -176,7 +176,8 @@ func registerRuntimeMemStats(r metrics.Registry) {
 	runtimeMetrics.MemStats.NumGC = metrics.NewGauge()
 	runtimeMetrics.MemStats.GCCPUFraction = metrics.NewGaugeFloat64()
 	runtimeMetrics.MemStats.PauseNs = metrics.NewHistogram(
-		lft.NewLockFreeSample(1028))
+		lft.NewLockFreeSampleWithBuckets([]float64{0, 58419, 525771, 4731939, 42587451, 383287059, 3449583531}),
+	)
 	runtimeMetrics.MemStats.PauseTotalNs = metrics.NewGauge()
 	runtimeMetrics.MemStats.StackInuse = metrics.NewGauge()
 	runtimeMetrics.MemStats.StackSys = metrics.NewGauge()
