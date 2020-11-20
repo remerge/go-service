@@ -170,16 +170,16 @@ func (p *PrometheusMetrics) Update() (err error) {
 }
 
 func (p *PrometheusMetrics) updateHistogram(mTypes map[string]string, mValues map[string][][2]string, name, labels string, hst metrics.Histogram) {
-	switch sample := hst.Sample().(type) {
-	case lft_sample.LegacyWithBuckets:
+	withBuckets, ok := hst.Sample().(lft_sample.SampleWithBuckets)
+	if ok {
 		// Amount of events is not checked here intentionally: a histogram output
 		// with zero values is considered valid
-		p.addBucketHistogramSummary(mTypes, mValues, name, labels, sample)
-	default:
-		sn := hst.Snapshot()
-		if sn.Count() > 0 {
-			p.addSummary(mTypes, mValues, name, labels, sn)
-		}
+		p.addBucketHistogramSummary(mTypes, mValues, name, labels, withBuckets)
+	}
+
+	sn := hst.Snapshot()
+	if sn.Count() > 0 {
+		p.addSummary(mTypes, mValues, name, labels, sn)
 	}
 }
 
@@ -220,7 +220,8 @@ func (p *PrometheusMetrics) writeData(failures []string, t map[string]string, v 
 	return nil
 }
 
-func (p *PrometheusMetrics) addBucketHistogramSummary(t map[string]string, v map[string][][2]string, name, labels string, sampler lft_sample.LegacyWithBuckets) {
+func (p *PrometheusMetrics) addBucketHistogramSummary(t map[string]string, v map[string][][2]string, name, labels string, sampler lft_sample.SampleWithBuckets) {
+	name = name + "_buckets"
 	t[name] = "histogram"
 
 	buckets, values := sampler.BucketsAndValues()

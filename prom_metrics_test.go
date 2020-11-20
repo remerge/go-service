@@ -19,9 +19,11 @@ func TestPrometheusMetrics_UpdateWithHistogramAndTimerEvent(t *testing.T) {
 
 	h1 := metrics.GetOrRegisterHistogram("app,l1=1 h1", r, metrics.NewUniformSample(104))
 	h1.Update(42)
-	h2 := metrics.GetOrRegisterHistogram("app,l1=1 h2", r, lft.NewLockFreeSample(1028))
-	h2.Update(1347941549560146)
-	h2.Update(9435590846921021)
+	h2 := metrics.GetOrRegisterHistogram("app,l1=1 h2", r, lft.NewLockFreeSampleWithBuckets([]float64{10, 20, 30}))
+	h2.Update(5)
+	h2.Update(15)
+	h2.Update(25)
+	h2.Update(31)
 
 	metrics.GetOrRegisterMeter("app,l1=1 m1", r)
 	timer := metrics.GetOrRegisterTimer("app t1", r)
@@ -64,18 +66,34 @@ app_h1_min{service="test",l1="1"} 42
 # TYPE app_h1_stddev gauge
 app_h1_stddev{service="test",l1="1"} 0
 
-# TYPE app_h2 histogram
-app_h2_count{service="test",l1="1"} 2
-app_h2_sum{service="test",l1="1"} 10783532396481167
-app_h2{service="test",l1="1",le="+Inf"} 2
-app_h2{service="test",l1="1",le="0.000000"} 0
-app_h2{service="test",l1="1",le="1347941549560145.000000"} 0
-app_h2{service="test",l1="1",le="2695883099120290.000000"} 1
-app_h2{service="test",l1="1",le="4043824648680435.000000"} 1
-app_h2{service="test",l1="1",le="5391766198240580.000000"} 1
-app_h2{service="test",l1="1",le="6739707747800725.000000"} 1
-app_h2{service="test",l1="1",le="8087649297360870.000000"} 1
-app_h2{service="test",l1="1",le="9435590846921020.000000"} 2
+# TYPE app_h2 summary
+app_h2_count{service="test",l1="1"} 4
+app_h2_sum{service="test",l1="1"} 76
+app_h2{service="test",l1="1",quantile="0.5"} 20
+app_h2{service="test",l1="1",quantile="0.75"} 29.5
+app_h2{service="test",l1="1",quantile="0.95"} 31
+app_h2{service="test",l1="1",quantile="0.99"} 31
+app_h2{service="test",l1="1",quantile="0.999"} 31
+
+# TYPE app_h2_buckets histogram
+app_h2_buckets_count{service="test",l1="1"} 4
+app_h2_buckets_sum{service="test",l1="1"} 76
+app_h2_buckets{service="test",l1="1",le="+Inf"} 3
+app_h2_buckets{service="test",l1="1",le="10.000000"} 1
+app_h2_buckets{service="test",l1="1",le="20.000000"} 2
+app_h2_buckets{service="test",l1="1",le="30.000000"} 3
+
+# TYPE app_h2_max gauge
+app_h2_max{service="test",l1="1"} 31
+
+# TYPE app_h2_mean gauge
+app_h2_mean{service="test",l1="1"} 19
+
+# TYPE app_h2_min gauge
+app_h2_min{service="test",l1="1"} 5
+
+# TYPE app_h2_stddev gauge
+app_h2_stddev{service="test",l1="1"} 9.899494936611665
 
 # TYPE app_m1_total counter
 app_m1_total{service="test",l1="1"} 0
