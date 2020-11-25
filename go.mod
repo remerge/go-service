@@ -9,6 +9,7 @@ require (
 	github.com/frankban/quicktest v1.10.0 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/gin-gonic/gin v0.0.0-20180512030042-bf7803815b0b
+	github.com/hashicorp/go-multierror v1.1.0
 	github.com/mattn/go-isatty v0.0.12 // indirect
 	github.com/pierrec/lz4 v2.5.2+incompatible // indirect
 	github.com/pkg/errors v0.9.1

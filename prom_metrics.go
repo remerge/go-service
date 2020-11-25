@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/hashicorp/go-multierror"
 	"github.com/rcrowley/go-metrics"
 	lft_sample "github.com/remerge/go-lock_free_timer/sample"
 )
@@ -121,7 +122,7 @@ Meters are represented as counters (see above):
 	app_m1_total{service="test",l1="1"} 0
 */
 // nolint: gocyclo
-func (p *PrometheusMetrics) Update() (err error) {
+func (p *PrometheusMetrics) Update() error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
@@ -134,10 +135,9 @@ func (p *PrometheusMetrics) Update() (err error) {
 
 	p.registry.Each(func(s string, i interface{}) {
 		var name, labels string
-		var err1 error
-		if name, labels, err1 = p.extractSignature(s); err1 != nil {
-			failures = append(failures, err1.Error())
-			return
+		var err error
+		if name, labels, err = p.extractSignature(s); err != nil {
+			failures = append(failures, err.Error())
 		}
 		switch m1 := i.(type) {
 		case metrics.Counter:
@@ -268,6 +268,7 @@ func (p *PrometheusMetrics) addV(v map[string][][2]string, bind, fullname string
 
 func (p *PrometheusMetrics) extractSignature(raw string) (name, labels string, err error) {
 	var split, lSplit []string
+
 	if split = strings.Split(raw, " "); len(split) != 2 {
 		return "", "", fmt.Errorf(`bad metric signature "%s"`, raw)
 	}
@@ -278,16 +279,23 @@ func (p *PrometheusMetrics) extractSignature(raw string) (name, labels string, e
 		return "", "", fmt.Errorf(`bad metric name "%s" in metric "%s"`, name, raw)
 	}
 
+	var multiErr error
 	for _, l := range split[1:] {
 		if lSplit = strings.Split(l, "="); len(lSplit) != 2 {
 			return "", "", fmt.Errorf(`bad label "%s" in metric "%s"`, l, raw)
 		}
+
 		if !promMetricLabelRe.MatchString(lSplit[0]) {
 			return "", "", fmt.Errorf(`bad label name "%s" in metric "%s"`, l, raw)
 		}
+		if !promMetricLabelRe.MatchString(lSplit[1]) {
+			err = fmt.Errorf(`bad label value "%s" in metric "%s"`, l, raw)
+			multiErr = multierror.Append(multiErr, err)
+			continue
+		}
 		labels += fmt.Sprintf(`,%s="%s"`, prometheusMetricName(lSplit[0]), lSplit[1])
 	}
-	return name, labels, nil
+	return name, labels, multiErr
 }
 
 func (p *PrometheusMetrics) fullName(name, labels string) (f string) {
