@@ -224,6 +224,8 @@ app_with_label_total{service="test",l1="2"} 5
 			metrics.GetOrRegisterCounter(`userdb,as_node=10.58.171.28:3000 as_node-added-count`, r).Inc(2)
 			metrics.GetOrRegisterCounter(`dataflow,kind=win,partner=exelbid,supply=native,ad_type=native,os=android,sdk=1.4.8 price`, r).Inc(2)
 			metrics.GetOrRegisterCounter(`dfc_client,file_type=dm-snapshot-dw1-info raw_download_size`, r).Inc(2)
+			metrics.GetOrRegisterCounter(`track,kind=win,partner=applovin,supply=html+video,ad_type=video event`, r).Inc(2)
+			metrics.GetOrRegisterCounter(`act,handler=/tune request_skipped`, r).Inc(1)
 			p := service.NewPrometheusMetrics(r, "test")
 			assert.NoError(t, p.Update())
 		})

@@ -16,7 +16,7 @@ import (
 var (
 	promMetricRe      = regexp.MustCompile(`^[a-zA-Z_:][a-zA-Z0-9_:]*$`)
 	promMetricLabelRe = regexp.MustCompile(`^[a-zA-Z0-9_]*$`)
-	promMetricValueRe = regexp.MustCompile(`^[a-zA-Z0-9_.:-]*$`)
+	promMetricValueRe = regexp.MustCompile(`^[a-zA-Z0-9_:\-\+\.\/]*$`)
 )
 
 type metricsSampler interface {
