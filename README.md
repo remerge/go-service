@@ -9,6 +9,7 @@ Package `service` provides an opinionated base class for implementing services
 go get github.com/remerge/go-service
 ```
 
+
 ## Usage
 * Every service should
 1. Implement service interface

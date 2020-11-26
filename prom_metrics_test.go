@@ -8,6 +8,7 @@ import (
 	lft "github.com/remerge/go-lock_free_timer"
 	"github.com/remerge/go-service"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPrometheusMetrics_UpdateWithHistogramAndTimerEvent(t *testing.T) {
@@ -203,12 +204,38 @@ app_with_label_total{service="test",l1="2"} 5
 			"# ERROR bad label name \"label.1=1\" in metric \"app_1,label.1=1 a_3\"\n",
 		},
 	} {
+
+		t.Run("if a label is invalid it still outputs valid labels and an error for the invalid ones", func(t *testing.T) {
+			r := metrics.NewRegistry()
+			metrics.GetOrRegisterCounter(`act,handler=click,partner=good counter`, r).Inc(2)
+			metrics.GetOrRegisterCounter(`act,handler=click,partner="Shopee" counter`, r).Inc(2)
+			metrics.GetOrRegisterCounter(`act,handler=click,partner=adx1005https://adclick.g.doubleclick.net/aclk?sa=L,time_since_bid=1h request`, r).Inc(3)
+
+			p := service.NewPrometheusMetrics(r, "test")
+			assert.Error(t, p.Update())
+
+			ret := p.String()
+			require.Contains(t, ret, `# ERROR bad label "partner=adx1005https://adclick.g.doubleclick.net/aclk?sa=L"`)
+			require.Contains(t, ret, `bad label value "partner="Shopee"" in metric "act,handler=click,partner="Shopee" counter`)
+			require.Contains(t, ret, `act_counter_total{service="test",handler="click",partner="good"} 2`)
+		})
+		t.Run("But valid metrics should not produce any error", func(t *testing.T) {
+			r := metrics.NewRegistry()
+			metrics.GetOrRegisterCounter(`userdb,as_node=10.58.171.28:3000 as_node-added-count`, r).Inc(2)
+			metrics.GetOrRegisterCounter(`dataflow,kind=win,partner=exelbid,supply=native,ad_type=native,os=android,sdk=1.4.8 price`, r).Inc(2)
+			metrics.GetOrRegisterCounter(`dfc_client,file_type=dm-snapshot-dw1-info raw_download_size`, r).Inc(2)
+			metrics.GetOrRegisterCounter(`track,kind=win,partner=applovin,supply=html+video,ad_type=video event`, r).Inc(2)
+			metrics.GetOrRegisterCounter(`act,handler=/tune request_skipped`, r).Inc(1)
+			p := service.NewPrometheusMetrics(r, "test")
+			assert.NoError(t, p.Update())
+		})
+
 		t.Run(td[0], func(t *testing.T) {
 			r := metrics.NewRegistry()
 			p := service.NewPrometheusMetrics(r, "test")
 			metrics.GetOrRegisterCounter(td[1], r)
 			assert.EqualError(t, p.Update(), td[2])
-			assert.Equal(t, td[3], p.String())
+			assert.Contains(t, p.String(), td[3])
 		})
 
 	}

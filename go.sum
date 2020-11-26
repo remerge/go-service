@@ -186,11 +186,14 @@ github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0/go.mod h1:8NvIoxWQoOIhqOTXgf
 github.com/grpc-ecosystem/grpc-gateway v1.9.5/go.mod h1:vNeuVxBJEsws4ogUvrchl83t/GYV9WGTSLVdBhOQFDY=
 github.com/hashicorp/consul/api v1.3.0/go.mod h1:MmDNSzIMUjNpY/mQ398R4bk2FnqQLoPndWW5VkKPlCE=
 github.com/hashicorp/consul/sdk v0.3.0/go.mod h1:VKf9jXwCTEY1QZP2MOLRhb5i/I/ssyNV1vwHyQBF0x8=
+github.com/hashicorp/errwrap v1.0.0 h1:hLrqtEDnRye3+sgx6z4qVLNuviH3MR5aQ0ykNJa/UYA=
 github.com/hashicorp/errwrap v1.0.0/go.mod h1:YH+1FKiLXxHSkmPseP+kNlulaMuP3n2brvKWEqk/Jc4=
 github.com/hashicorp/go-cleanhttp v0.5.1/go.mod h1:JpRdi6/HCYpAwUzNwuwqhbovhLtngrth3wmdIIUrZ80=
 github.com/hashicorp/go-immutable-radix v1.0.0/go.mod h1:0y9vanUI8NX6FsYoO3zeMjhV/C5i9g4Q3DwcSNZ4P60=
 github.com/hashicorp/go-msgpack v0.5.3/go.mod h1:ahLV/dePpqEmjfWmKiqvPkv/twdG7iPBM1vqhUKIvfM=
 github.com/hashicorp/go-multierror v1.0.0/go.mod h1:dHtQlpGsu+cZNNAkkCN/P3hoUDHhCYQXV3UM06sGGrk=
+github.com/hashicorp/go-multierror v1.1.0 h1:B9UzwGQJehnUY1yNrnwREHc3fGbC2xefo8g4TbElacI=
+github.com/hashicorp/go-multierror v1.1.0/go.mod h1:spPvp8C1qA32ftKqdAHm4hHTbPw+vmowP0z+KUhOZdA=
 github.com/hashicorp/go-rootcerts v1.0.0/go.mod h1:K6zTfqpRlCUIjkwsN4Z+hiSfzSTQa6eBIzfwKfwNnHU=
 github.com/hashicorp/go-sockaddr v1.0.0/go.mod h1:7Xibr9yA9JjQq1JpNB2Vw7kxv8xerXegt+ozgdvDeDU=
 github.com/hashicorp/go-syslog v1.0.0/go.mod h1:qPfqrKkXGihmCqbJM2mZgkZGvKG1dFdvsLplgctolz4=
@@ -341,8 +344,6 @@ github.com/remerge/cue v0.0.0-20180404154012-5ce627d813ef h1:e6YXHtDlqTVBTvtP67b
 github.com/remerge/cue v0.0.0-20180404154012-5ce627d813ef/go.mod h1:D/xRd2/3oWuI1lLZXdnsjumqgKmN1L5EQ4/5A97re48=
 github.com/remerge/go-env v0.0.0-20180212143913-0274550cec6b h1:PXhewWpLD0ErCxeQCQZpU7Ok8kLWajF/SaXQSSvsRuY=
 github.com/remerge/go-env v0.0.0-20180212143913-0274550cec6b/go.mod h1:N/FoQvhIyC6FguYWo3nr6NP3R1h58h9VY1IlKs1+F/o=
-github.com/remerge/go-lock_free_timer v0.0.0-20201120102134-792cc797e2b4 h1:AF88aX2bw0vlHPTN+AorZojEXIFelTZ4CJmxHIi8Lec=
-github.com/remerge/go-lock_free_timer v0.0.0-20201120102134-792cc797e2b4/go.mod h1:QbEXd09lgO+wp01g8Ux3vkPhKuHd+Lq7P/InW+XI/aE=
 github.com/remerge/go-lock_free_timer v0.0.0-20201120120012-a207839d7b06 h1:MAfUBj98IXKY9JcJ5bR3lHx0uozTOZWc4PqG3ha702M=
 github.com/remerge/go-lock_free_timer v0.0.0-20201120120012-a207839d7b06/go.mod h1:QbEXd09lgO+wp01g8Ux3vkPhKuHd+Lq7P/InW+XI/aE=
 github.com/remerge/go-timestr v0.0.0-20191106144729-a4e479cf4a76 h1:csDF6x7ssfFu5Z4vhPM8YUbzJjEjYZ/N5TwfRKHIH4E=
